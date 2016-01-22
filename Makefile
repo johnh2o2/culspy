@@ -58,7 +58,7 @@ python : culsp_wrap.o culsp.o periodogram_nomain.o
 	#mv _culspy.so culspy/
 	#touch culspy/__init__.py
 
-clean :
-	rm -f *o *so *pyc $(EXECUTABLE)
-	rm -f -r culspy/
-	rm -r -f build/
+clean : clean-python
+	rm -f *o $(EXECUTABLE)
+clean-python:
+	rm -r -f *pyc *so CuLSP* dist/ build/ culspy.py

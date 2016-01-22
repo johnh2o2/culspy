@@ -1,12 +1,11 @@
 Jan 20, 2016 -- John Hoffman
 
+Python wrappings + updated makefile!!
+
 Modified code from original form to comply with
 the latest CUDA standards. For instance, the original
 Makefile referenced "common.mk". On my Ubuntu 14.04
 system, I do not have a common.mk file anywhere.
 
-Also added a couple of test files (a testlc file, etc.)
-
-Might want to add a couple of things for timing as well!
 
 

@@ -110,7 +110,7 @@ class custom_build_ext(build_ext):
         build_ext.build_extensions(self)
 
 setup(name='CuLSPy',
-      version='1.0',
+      version='1.1',
       description='Python wrapper for culsp (Townsend 2010)',
       author='John Hoffman (orig. by Richard Townsend)',
       author_email='jah5@princeton.edu',
