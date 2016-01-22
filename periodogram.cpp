@@ -166,19 +166,19 @@ set_frequency_params (int N_t, float *t, float F_over, float F_high, int *N_f, f
 
   float del_t = t_max - t_min;
 
-  printf("Average time spacing: %f\n", del_t/N_t);
+  //printf("Average time spacing: %f\n", del_t/N_t);
 
   // Set up the frequency spacing
 
   *df = 1.f/(F_over*del_t);
 
-  printf("Frequency spacing: %f\n", *df);
+  //printf("Frequency spacing: %f\n", *df);
 
   // Set up the maximum frequency
 
   float f_max = F_high*N_t/(2*del_t);
 
-  printf("Maximum frequency: %f\n", f_max);
+  //printf("Maximum frequency: %f\n", f_max);
 
   // Set up the number of frequency points
 
@@ -188,7 +188,7 @@ set_frequency_params (int N_t, float *t, float F_over, float F_high, int *N_f, f
   *N_f += (BLOCK_SIZE - *N_f % BLOCK_SIZE) % BLOCK_SIZE;
   #endif
 
-  printf("Number of frequencies: %d\n", *N_f);
+  //printf("Number of frequencies: %d\n", *N_f);
 
   // Finish
 

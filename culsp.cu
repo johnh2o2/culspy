@@ -20,7 +20,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <argtable2.h>
-
+#include "culsp.h"
 #include "periodogram.h"
 #include "culsp_kernel.cu"
 
@@ -36,9 +36,9 @@
 
 // Forward declarations
 
-void initialize (int, char **, char **, char **, float *, float *, int *);
-void initialize_cuda (int, int);
-void eval_LS_periodogram (int, int, float, float *, float *, float *);
+//void initialize (int, char **, char **, char **, float *, float *, int *);
+//void initialize_cuda (int, int);
+//void eval_LS_periodogram (int, int, float, float *, float *, float *);
 
 // Main program
 
@@ -60,6 +60,7 @@ main( int argc, char** argv)
 
   float df;
   float *P;
+  float minf = 0.0;
 
   // Initialize
 
@@ -79,15 +80,16 @@ main( int argc, char** argv)
 
   // Initialize CUDA
 
-  initialize_cuda(device, N_f);
+  initialize_cuda(device);
 
   // Start the timer
 
   double time_a = get_time();
 		 
   // Evaluate the Lomb-Scargle periodogram
- 
-  eval_LS_periodogram(N_t, N_f, df, t, X, P);
+  // set minf to 0 here (simplicity; I'm interacting with this
+  // through python anyway.
+  eval_LS_periodogram(N_t, N_f, df, minf,  t, X, P);
 
   // Stop the timer
 
@@ -166,9 +168,9 @@ initialize (int argc, char **argv, char **filename_in, char **filename_out,
 ////
 
 void
-initialize_cuda (int device, int N_f)
-{
-
+initialize_cuda (int device)
+{ 
+  
   // Select the device
 
   CUDA_CALL(cudaSetDevice(device));
@@ -187,7 +189,7 @@ initialize_cuda (int device, int N_f)
 ////
 
 void
-eval_LS_periodogram (int N_t, int N_f, float df, 
+eval_LS_periodogram (int N_t, int N_f, float df, float minf, 
 		     float *t, float *X, float *P)
 {
 
@@ -209,13 +211,13 @@ eval_LS_periodogram (int N_t, int N_f, float df,
   dim3 grid_dim(N_f/BLOCK_SIZE, 1, 1);
   dim3 block_dim(BLOCK_SIZE, 1, 1);
 
-  printf("Grid of %d frequency blocks of size %d threads\n", N_f/BLOCK_SIZE, BLOCK_SIZE);
+  //printf("Grid of %d frequency blocks of size %d threads\n", N_f/BLOCK_SIZE, BLOCK_SIZE);
 
   // Launch the kernel
 
-  printf("Launching kernel...\n");
+  //printf("Launching kernel...\n");
 
-  culsp_kernel<<<grid_dim, block_dim>>>(d_t, d_X, d_P, df, N_t);
+  culsp_kernel<<<grid_dim, block_dim>>>(d_t, d_X, d_P, df, N_t, minf);
 
   cudaError_t err = cudaGetLastError();
   if(err != cudaSuccess) {
@@ -226,7 +228,7 @@ eval_LS_periodogram (int N_t, int N_f, float df,
 
   CUDA_CALL(cudaThreadSynchronize());
 
-  printf("Completed!\n");
+  //printf("Completed!\n");
 
   // Copy data from the device
 

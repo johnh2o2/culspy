@@ -24,7 +24,7 @@
 
 __global__ void
 __launch_bounds__(BLOCK_SIZE)
-culsp_kernel(float *d_t, float *d_X, float *d_P, float df, int N_t)
+culsp_kernel(float *d_t, float *d_X, float *d_P, float df, int N_t, float minf)
 {
 
   __shared__ float s_t[BLOCK_SIZE];
@@ -32,7 +32,7 @@ culsp_kernel(float *d_t, float *d_X, float *d_P, float df, int N_t)
 
   // Calculate the frequency
 
-  float f = (blockIdx.x*BLOCK_SIZE+threadIdx.x+1)*df;
+  float f = (blockIdx.x*BLOCK_SIZE+threadIdx.x+1)*df + minf;
 
   // Calculate the various sums
 
