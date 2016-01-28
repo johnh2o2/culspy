@@ -17,22 +17,37 @@
 
 #ifndef _CULSP_KERNEL_
 #define _CULSP_KERNEL_
+#include <curand.h>
+#include <curand_kernel.h>
 
 #define TWOPI 6.2831853071796f
+#define MAX 100000
+#define RANDOM(a)  ( (float) ( 
 
-// Kernel
+
+__global__ void setup_curand_kernel(curandState *state, unsigned int seed)
+{
+    int id = threadIdx.x + blockIdx.x * BLOCK_SIZE;
+    /* Each thread gets same seed, a different sequence 
+       number, no offset */
+    curand_init(seed, id, 0, &state[id]);
+}
+
+
 
 __global__ void
 __launch_bounds__(BLOCK_SIZE)
-culsp_kernel(float *d_t, float *d_X, float *d_P, float df, int N_t, float minf)
+culsp_kernel(float *d_t, float *d_X, float *d_P, float df, int N_t, int N_f, float minf)
 {
+  int id = blockIdx.x*BLOCK_SIZE+threadIdx.x;
+  if ( id >= N_f) return;
 
   __shared__ float s_t[BLOCK_SIZE];
   __shared__ float s_X[BLOCK_SIZE];
 
   // Calculate the frequency
 
-  float f = (blockIdx.x*BLOCK_SIZE+threadIdx.x+1)*df + minf;
+  float f = (id+1)*df + minf;
 
   // Calculate the various sums
 
@@ -141,7 +156,7 @@ culsp_kernel(float *d_t, float *d_X, float *d_P, float df, int N_t, float minf)
 
   // Calculate P
 
-  d_P[blockIdx.x*BLOCK_SIZE+threadIdx.x] = 
+  d_P[id] = 
       0.5f*((ct*XC + st*XS)*(ct*XC + st*XS)/
 	    (ct*ct*CC + 2*ct*st*CS + st*st*SS) + 
 	    (ct*XS - st*XC)*(ct*XS - st*XC)/
@@ -150,5 +165,150 @@ culsp_kernel(float *d_t, float *d_X, float *d_P, float df, int N_t, float minf)
   // Finish
 
 }
+
+
+__global__ void
+__launch_bounds__(BLOCK_SIZE)
+bootstrap_kernel(float *d_t, float *d_X, float *d_P, float df, 
+                  int N_t, int N_f, float minf, curandState *state){
+
+  // Same as culsp kernel, except that we draw an s_X value at random.
+  // doing this N times will give you a statistical bootstrap from which
+  // false alarm probabilities can be calculated. This gets rid of the Gaussian
+  // error assumption, but does NOT relax the assumption that all observations
+  // are uncorrelated (violated when you have red noise, etc.)
+  int id = blockIdx.x*BLOCK_SIZE+threadIdx.x;
+  if ( id >= N_f) return;
+  
+  
+
+  __shared__ float s_t[BLOCK_SIZE];
+  __shared__ float s_X[BLOCK_SIZE];
+
+  // Calculate the frequency
+
+  float f = (id+1)*df + minf;
+
+  // Calculate the various sums
+
+  float XC = 0.f;
+  float XS = 0.f;
+  float CC = 0.f;
+  float CS = 0.f;
+
+  float XC_chunk = 0.f;
+  float XS_chunk = 0.f;
+  float CC_chunk = 0.f;
+  float CS_chunk = 0.f;
+
+  int j, jrand;
+
+  for(j = 0; j < N_t-BLOCK_SIZE; j += BLOCK_SIZE) {
+
+    // Load the chunk into shared memory
+
+    __syncthreads();
+
+    jrand = (int) (N_t * curand_uniform(&state[id]) );
+
+    s_t[threadIdx.x] = d_t[j+threadIdx.x];
+    s_X[threadIdx.x] = d_X[jrand];
+
+    __syncthreads();
+
+    // Update the sums
+
+    #pragma unroll
+    for(int k = 0; k < BLOCK_SIZE; k++) {
+
+      // Range reduction
+
+      float ft = f*s_t[k];
+      ft -= rintf(ft);
+
+      float c;
+      float s;
+
+      __sincosf(TWOPI*ft, &s, &c);
+
+      XC_chunk += s_X[k]*c;
+      XS_chunk += s_X[k]*s;
+      CC_chunk += c*c;
+      CS_chunk += c*s;
+
+    }
+
+    XC += XC_chunk;
+    XS += XS_chunk;
+    CC += CC_chunk;
+    CS += CS_chunk;
+
+    XC_chunk = 0.f;
+    XS_chunk = 0.f;
+    CC_chunk = 0.f;
+    CS_chunk = 0.f;
+    
+  }
+
+  // Handle the final chunk
+
+  __syncthreads();
+
+  if(j+threadIdx.x < N_t) {
+    jrand = (int) (N_t * curand_uniform(&state[id]));
+
+    s_t[threadIdx.x] = d_t[j+threadIdx.x];
+    s_X[threadIdx.x] = d_X[jrand];
+
+  }
+
+  __syncthreads();
+    
+  for(int k = 0; k < N_t-j; k++) {
+
+    // Range reduction
+
+    float ft = f*s_t[k];
+    ft -= rintf(ft);
+
+    float c;
+    float s;
+
+    __sincosf(TWOPI*ft, &s, &c);
+
+    XC_chunk += s_X[k]*c;
+    XS_chunk += s_X[k]*s;
+    CC_chunk += c*c;
+    CS_chunk += c*s;
+
+  }
+
+  XC += XC_chunk;
+  XS += XS_chunk;
+  CC += CC_chunk;
+  CS += CS_chunk;
+
+  float SS = (float) N_t - CC;
+    
+  // Calculate the tau terms
+
+  float ct;
+  float st;
+
+  __sincosf(0.5f*atan2(2.f*CS, CC-SS), &st, &ct);
+
+  // Calculate P
+
+  d_P[id] = 
+      0.5f*((ct*XC + st*XS)*(ct*XC + st*XS)/
+      (ct*ct*CC + 2*ct*st*CS + st*st*SS) + 
+      (ct*XS - st*XC)*(ct*XS - st*XC)/
+      (ct*ct*SS - 2*ct*st*CS + st*st*CC));
+
+  // Finish
+
+}
+
+
 
 #endif

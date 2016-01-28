@@ -46,7 +46,7 @@ periodogram_nomain.o : periodogram.cpp
 	$(CXX) -Dmain=oldmain $(CXXFLAGS) -c -o $@ $^
 
 culsp.o : culsp.cu
-	$(NVCC) -Xcompiler -fpic $(NVCCFLAGS) -c -o $@ $^ -I$(cuda_inc)
+	$(NVCC) $(NVCCFLAGS) -c -o $@ $^ -I$(cuda_inc)
 
 culsp_wrap.o : culsp_wrap.cpp
 	$(CXX) -fPIC $(CXXFLAGS) -c -o $@ $^ -I$(python_inc)
@@ -58,7 +58,15 @@ python : culsp_wrap.o culsp.o periodogram_nomain.o
 	#mv _culspy.so culspy/
 	#touch culspy/__init__.py
 
+#testminmax.o : testminmax.cu
+#	$(NVCC) $(NVCCFLAGS) -c -o $@ $^ -I$(cuda_inc)
+
+#testmax : testminmax.o
+#	$(CXX) $(CXXFLAGS) -o $@ $^ -lm -lcudart -L$(cuda_lib)
+
 clean : clean-python
 	rm -f *o $(EXECUTABLE)
+#clean-testmax :
+#	rm -f testmax testminmax.o
 clean-python:
 	rm -r -f *pyc *so CuLSP* dist/ build/ culspy.py

@@ -20,9 +20,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <argtable2.h>
-#include "culsp.h"
+
 #include "periodogram.h"
+#include "culsp.h"
 #include "culsp_kernel.cu"
+#include "minmax.cu"
 
 // Wrapper macros
 
@@ -33,6 +35,15 @@
 	      __FILE__, __LINE__, cudaGetErrorString(err));		\
       exit(EXIT_FAILURE);						\
     }}
+
+#define CUDA_ERR_CHECK() { \
+    err = cudaGetLastError(); \
+  if(err != cudaSuccess) { \
+    fprintf(stderr, "Cuda error: kernel launch failed in file '%s' in line %i : %s.\n", \
+      __FILE__, __LINE__, cudaGetErrorString(err)); \
+        exit(EXIT_FAILURE); \
+  }}
+
 
 // Forward declarations
 
@@ -108,6 +119,7 @@ main( int argc, char** argv)
   free(t);
 
   // Finish
+  return 0;
 
 }
 
@@ -193,6 +205,7 @@ eval_LS_periodogram (int N_t, int N_f, float df, float minf,
 		     float *t, float *X, float *P)
 {
 
+
   // Allocate device memory and copy data over
 
   float *d_t;
@@ -217,7 +230,7 @@ eval_LS_periodogram (int N_t, int N_f, float df, float minf,
 
   //printf("Launching kernel...\n");
 
-  culsp_kernel<<<grid_dim, block_dim>>>(d_t, d_X, d_P, df, N_t, minf);
+  culsp_kernel<<<grid_dim, block_dim>>>(d_t, d_X, d_P, df, N_t, N_f, minf);
 
   cudaError_t err = cudaGetLastError();
   if(err != cudaSuccess) {
@@ -237,6 +250,109 @@ eval_LS_periodogram (int N_t, int N_f, float df, float minf,
   CUDA_CALL(cudaFree(d_P));
   CUDA_CALL(cudaFree(d_X));
   CUDA_CALL(cudaFree(d_t));
+
+  // Finish
+
+}
+
+void
+bootstrap_LS_periodogram(int N_t, int N_f, float df, float minf, 
+         float *t, float *X, float *max_heights, int N_bootstrap, int use_gpu_to_get_max){
+
+
+  // Allocate device memory and copy data over
+
+  float *d_t, *d_X, *d_P;
+  float *P, *gmax;
+  int i, gd, gdm, gdm0;
+  float val;
+
+  curandState *state;
+  cudaError_t err; 
+
+  CUDA_CALL(cudaMalloc((void**) &d_t, N_t*sizeof(float)));
+  CUDA_CALL(cudaMalloc((void**) &d_X, N_t*sizeof(float)));
+  CUDA_CALL(cudaMalloc((void**) &d_P, N_f*sizeof(float)));
+
+  CUDA_CALL(cudaMemcpy(d_t, t, N_t*sizeof(float), cudaMemcpyHostToDevice));
+  CUDA_CALL(cudaMemcpy(d_X, X, N_t*sizeof(float), cudaMemcpyHostToDevice));
+
+  // Get N_bootstraps LSP; then get max_height of each of these.
+  // This can be made faster by altering the bootstrap code to get
+  // the max within the function, though this is much more complicated
+  // should be small speed increase: 
+  //    <LC> ~ 0.4 MB; transfer time wasted = 2 * (0.4/1000 GB) / (~15 GB/s PCIe3x16) 
+  //                 ~ 8E-4 seconds...maaaaaybe significant...
+  // timing the results on 
+
+  
+  gd = N_f/BLOCK_SIZE;
+  if (gd * BLOCK_SIZE < N_f) gd += 1; // ensure we have enough blocks
+
+  dim3 grid_dim(gd, 1, 1);
+  dim3 block_dim(BLOCK_SIZE, 1, 1);
+  
+  // setup the random generator
+  CUDA_CALL(cudaMalloc((void **) &state, gd*BLOCK_SIZE * sizeof(curandState)));
+  setup_curand_kernel<<<grid_dim, block_dim>>>(state, time(NULL));
+  
+  if (use_gpu_to_get_max){
+    // allocate memory for the maximums array
+    CUDA_CALL(cudaMalloc((void **) &gmax, gd * sizeof(float)));  
+
+  } else {
+
+    //printf("USING CPU TO FIND MAX(P_LS)\n");
+    P = (float *) malloc(N_f * sizeof(float));
+  }
+
+  for(i=0; i<N_bootstrap; i++){
+
+    bootstrap_kernel<<<grid_dim, block_dim>>>(d_t, d_X, d_P, df, N_t, N_f, minf, state);
+    //CUDA_ERR_CHECK();
+
+    if (use_gpu_to_get_max){
+      // calculate the maximum.
+      max_reduce<<<grid_dim, block_dim, BLOCK_SIZE * sizeof(float)>>>(d_P, gmax, N_f);
+      
+      // Now reduce until only one block is needed.
+      gdm = gd;
+      while (gdm > 1){
+
+        gdm0 = gdm;
+        gdm /= BLOCK_SIZE;
+        if( gdm * BLOCK_SIZE < gdm0 ) gdm += 1;
+        
+        dim3 grid_dim_max(gdm, 1, 1);
+
+        max_reduce<<<grid_dim_max, block_dim, BLOCK_SIZE*sizeof(float)>>>(gmax, gmax, gdm0);
+
+      }
+
+      //copy max(P) to the host
+      CUDA_CALL(cudaMemcpy(&val, gmax, sizeof(float), cudaMemcpyDeviceToHost));
+    
+    } else {
+    
+      CUDA_CALL(cudaMemcpy(P, d_P, N_f*sizeof(float), cudaMemcpyDeviceToHost));
+      //printf("CPUMAX");
+      val = cpu_maxf(P, N_f); 
+    }
+
+    max_heights[i] = val;
+  }
+
+  //CUDA_ERR_CHECK();
+
+  CUDA_CALL(cudaThreadSynchronize());
+
+  CUDA_CALL(cudaFree(d_P));
+  CUDA_CALL(cudaFree(d_X));
+  CUDA_CALL(cudaFree(d_t));
+  if (use_gpu_to_get_max) {
+    CUDA_CALL(cudaFree(state));
+    CUDA_CALL(cudaFree(gmax));
+  }
 
   // Finish
 

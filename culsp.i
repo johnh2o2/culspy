@@ -5,6 +5,7 @@
 extern void initialize_cuda(int);
 extern void set_frequency_params(int, float *, float, float, int *, float *);
 extern void eval_LS_periodogram(int, int, float,float, float *, float *, float *);
+extern void bootstrap_LS_periodogram(int, int, float,float,  float *, float *, float *, int, int);
 %}
 
 extern void initialize_cuda(int);
@@ -12,6 +13,7 @@ extern void initialize_cuda(int);
 %apply int *OUTPUT { int *OUTPUT1 };
 extern void set_frequency_params(int, float *, float, float, int *OUTPUT1, float *OUTPUT);
 extern void eval_LS_periodogram(int, int, float,float,  float *, float *, float *);
+extern void bootstrap_LS_periodogram(int, int, float,float,  float *, float *, float *, int, int);
 
 %inline %{
 
@@ -79,5 +81,39 @@ def LSP(t, x, f_over=1.0, f_high=1.0, minf=0.0, maxf=None, Nf=None ):
     
     
     return freqs, power
+
+def LSPbootstrap(t, x, f_over=1.0, f_high=1.0, minf=0.0, 
+                            maxf=None, Nf=None, Nbootstrap=100,
+                            use_gpu_to_get_max = True ):
+    Nt = len(t)
+    ct = _convert_to_c(t)
+    cx = _convert_to_c(x)
+
+    if use_gpu_to_get_max: gpumax = 1
+    else: gpumax = 0
+
+    if maxf is not None and Nf is not None:
+        Nf = correct_nf(Nf)
+        df = (maxf - minf)/Nf
+    else:
+        ct = _convert_to_c(t)
+        Nf0, df0 = _culspy.set_frequency_params(Nt, ct, f_over, f_high)
+        if not Nf is None:
+            Nf = correct_nf(Nf)
+            df = (Nf0 * df0)/Nf
+        else:
+            Nf = Nf0
+            df = df0
+            
+    cmax_heights = _culspy.get_float_array(Nbootstrap)
+    _culspy.bootstrap_LS_periodogram(Nt, Nf, df, minf, ct, cx, 
+                                            cmax_heights, Nbootstrap, gpumax)
+
+    max_heights = _convert_to_py(cmax_heights, Nbootstrap)
+
+    return max_heights
+
+
+
 
 %}

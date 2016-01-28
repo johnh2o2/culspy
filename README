@@ -1,5 +1,7 @@
 Jan 20, 2016 -- John Hoffman
 
+Main python functions are LSP and LSPbootstrap
+
 Python wrappings + updated makefile!!
 
 Modified code from original form to comply with

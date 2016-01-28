@@ -1,9 +1,9 @@
-import ctypes, culsp
+import ctypes, culspy
 import numpy as np
 from time import time
 
 
-culsp.initialize_cuda(0)
+culspy.initialize_cuda(0)
 
 f = open("timing_results.txt", 'w')
 Nvals = [ 100, 1000, 3000, 5000, 10000, 20000, 30000, 50000, 100000, 500000, 1000000 ]
@@ -24,7 +24,7 @@ for Nt in Nvals:
 	t , x = gettx(Nt)
 	for Nf in Nfvals:
 		t0 = time()
-		frq, power = culsp.LSP(t, x, Nf=Nf)
+		frq, power = culspy.LSP(t, x, Nf=Nf)
 		dt = time() - t0
 		msg = '%d %d %.5e'%(Nt, Nf, dt)
 		print msg	
@@ -35,7 +35,7 @@ f = open("timing_results_std.txt", 'w')
 for Nt in Nvals:
 	t, x= gettx(Nt)
 	t0 = time()
-	culsp.LSP(t, x)
+	culspy.LSP(t, x)
 	dt = time() - t0
 
 	msg = "%d %.5e"%(Nt, dt)
