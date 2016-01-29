@@ -53,14 +53,15 @@
 //void eval_LS_periodogram (int, int, float, float *, float *, float *);
 
 // Main program
-void *get_pinned_float_array(int n){
-        void *x = CUDA_CALL(cudaMallocHost(n * sizeof(float)));
+float *get_pinned_float_array(int n){
+        float *x
+        cudaMallocHost((void **) &x, n * sizeof(float)));
         return x;
 }
-float get_pinned_val(void *x,int i){
-        return (float) x[i];
+float get_pinned_val(float *x,int i){
+        return  x[i];
 }
-void set_pinned_val(void *x, int i, float val){
+void set_pinned_val(float *x, int i, float val){
         x[i] = val;
 }
 
