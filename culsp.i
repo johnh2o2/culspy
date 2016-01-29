@@ -8,6 +8,10 @@ extern void eval_LS_periodogram(int, int, float,float, float *, float *, float *
 extern void bootstrap_LS_periodogram(int, int, float,float,  float *, float *, float *, int, int);
 extern void batch_eval_LS_periodogram(int*, int, int, float, float, float *, float *, float *);
 extern void stream_eval_LS_periodogram(int*, int, int, float, float, float *, float *, float *);
+extern float *get_pinned_float_array(int n);
+extern float get_pinned_val(float *x,int i);
+extern void set_pinned_val(float *x, int i, float val);
+
 %}
 
 extern void initialize_cuda(int);
@@ -18,6 +22,9 @@ extern void eval_LS_periodogram(int, int, float,float,  float *, float *, float 
 extern void bootstrap_LS_periodogram(int, int, float,float,  float *, float *, float *, int, int);
 extern void batch_eval_LS_periodogram(int*, int, int, float, float, float *, float *, float *);
 extern void stream_eval_LS_periodogram(int*, int, int, float, float, float *, float *, float *);
+extern float *get_pinned_float_array(int n);
+extern float get_pinned_val(float *x,int i);
+extern void set_pinned_val(float *x, int i, float val);
 
 %inline %{
 
