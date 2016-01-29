@@ -54,7 +54,7 @@
 
 // Main program
 float *get_pinned_float_array(int n){
-        float *x
+        float *x;
         cudaMallocHost((void **) &x, n * sizeof(float)));
         return x;
 }
