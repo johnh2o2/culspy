@@ -3039,6 +3039,8 @@ extern void initialize_cuda(int);
 extern void set_frequency_params(int, float *, float, float, int *, float *);
 extern void eval_LS_periodogram(int, int, float,float, float *, float *, float *);
 extern void bootstrap_LS_periodogram(int, int, float,float,  float *, float *, float *, int, int);
+extern void batch_eval_LS_periodogram(int*, int, int, float, float, float *, float *, float *);
+extern void stream_eval_LS_periodogram(int*, int, int, float, float, float *, float *, float *);
 
 
 #include <limits.h>
@@ -3241,6 +3243,8 @@ SWIG_From_float  (float value)
 
 
 
+
+
 float *get_float_array(int n){
         float *x = (float *)malloc(n * sizeof(float));
         return x;
@@ -3249,6 +3253,18 @@ float get_val(float *x,int i){
         return x[i];
 }
 void set_val(float *x, int i, float val){
+        x[i] = val;
+}
+
+
+int *get_int_array(int n){
+        int *x = (int *)malloc(n * sizeof(int));
+        return x;
+}
+int get_ival(int *x,int i){
+        return x[i];
+}
+void set_ival(int *x, int i, int val){
         x[i] = val;
 }
 
@@ -3516,6 +3532,174 @@ fail:
 }
 
 
+SWIGINTERN PyObject *_wrap_batch_eval_LS_periodogram(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  int *arg1 = (int *) 0 ;
+  int arg2 ;
+  int arg3 ;
+  float arg4 ;
+  float arg5 ;
+  float *arg6 = (float *) 0 ;
+  float *arg7 = (float *) 0 ;
+  float *arg8 = (float *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int val2 ;
+  int ecode2 = 0 ;
+  int val3 ;
+  int ecode3 = 0 ;
+  float val4 ;
+  int ecode4 = 0 ;
+  float val5 ;
+  int ecode5 = 0 ;
+  void *argp6 = 0 ;
+  int res6 = 0 ;
+  void *argp7 = 0 ;
+  int res7 = 0 ;
+  void *argp8 = 0 ;
+  int res8 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  PyObject * obj2 = 0 ;
+  PyObject * obj3 = 0 ;
+  PyObject * obj4 = 0 ;
+  PyObject * obj5 = 0 ;
+  PyObject * obj6 = 0 ;
+  PyObject * obj7 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OOOOOOOO:batch_eval_LS_periodogram",&obj0,&obj1,&obj2,&obj3,&obj4,&obj5,&obj6,&obj7)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_int, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "batch_eval_LS_periodogram" "', argument " "1"" of type '" "int *""'"); 
+  }
+  arg1 = reinterpret_cast< int * >(argp1);
+  ecode2 = SWIG_AsVal_int(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "batch_eval_LS_periodogram" "', argument " "2"" of type '" "int""'");
+  } 
+  arg2 = static_cast< int >(val2);
+  ecode3 = SWIG_AsVal_int(obj2, &val3);
+  if (!SWIG_IsOK(ecode3)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "batch_eval_LS_periodogram" "', argument " "3"" of type '" "int""'");
+  } 
+  arg3 = static_cast< int >(val3);
+  ecode4 = SWIG_AsVal_float(obj3, &val4);
+  if (!SWIG_IsOK(ecode4)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode4), "in method '" "batch_eval_LS_periodogram" "', argument " "4"" of type '" "float""'");
+  } 
+  arg4 = static_cast< float >(val4);
+  ecode5 = SWIG_AsVal_float(obj4, &val5);
+  if (!SWIG_IsOK(ecode5)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode5), "in method '" "batch_eval_LS_periodogram" "', argument " "5"" of type '" "float""'");
+  } 
+  arg5 = static_cast< float >(val5);
+  res6 = SWIG_ConvertPtr(obj5, &argp6,SWIGTYPE_p_float, 0 |  0 );
+  if (!SWIG_IsOK(res6)) {
+    SWIG_exception_fail(SWIG_ArgError(res6), "in method '" "batch_eval_LS_periodogram" "', argument " "6"" of type '" "float *""'"); 
+  }
+  arg6 = reinterpret_cast< float * >(argp6);
+  res7 = SWIG_ConvertPtr(obj6, &argp7,SWIGTYPE_p_float, 0 |  0 );
+  if (!SWIG_IsOK(res7)) {
+    SWIG_exception_fail(SWIG_ArgError(res7), "in method '" "batch_eval_LS_periodogram" "', argument " "7"" of type '" "float *""'"); 
+  }
+  arg7 = reinterpret_cast< float * >(argp7);
+  res8 = SWIG_ConvertPtr(obj7, &argp8,SWIGTYPE_p_float, 0 |  0 );
+  if (!SWIG_IsOK(res8)) {
+    SWIG_exception_fail(SWIG_ArgError(res8), "in method '" "batch_eval_LS_periodogram" "', argument " "8"" of type '" "float *""'"); 
+  }
+  arg8 = reinterpret_cast< float * >(argp8);
+  batch_eval_LS_periodogram(arg1,arg2,arg3,arg4,arg5,arg6,arg7,arg8);
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_stream_eval_LS_periodogram(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  int *arg1 = (int *) 0 ;
+  int arg2 ;
+  int arg3 ;
+  float arg4 ;
+  float arg5 ;
+  float *arg6 = (float *) 0 ;
+  float *arg7 = (float *) 0 ;
+  float *arg8 = (float *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int val2 ;
+  int ecode2 = 0 ;
+  int val3 ;
+  int ecode3 = 0 ;
+  float val4 ;
+  int ecode4 = 0 ;
+  float val5 ;
+  int ecode5 = 0 ;
+  void *argp6 = 0 ;
+  int res6 = 0 ;
+  void *argp7 = 0 ;
+  int res7 = 0 ;
+  void *argp8 = 0 ;
+  int res8 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  PyObject * obj2 = 0 ;
+  PyObject * obj3 = 0 ;
+  PyObject * obj4 = 0 ;
+  PyObject * obj5 = 0 ;
+  PyObject * obj6 = 0 ;
+  PyObject * obj7 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OOOOOOOO:stream_eval_LS_periodogram",&obj0,&obj1,&obj2,&obj3,&obj4,&obj5,&obj6,&obj7)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_int, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "stream_eval_LS_periodogram" "', argument " "1"" of type '" "int *""'"); 
+  }
+  arg1 = reinterpret_cast< int * >(argp1);
+  ecode2 = SWIG_AsVal_int(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "stream_eval_LS_periodogram" "', argument " "2"" of type '" "int""'");
+  } 
+  arg2 = static_cast< int >(val2);
+  ecode3 = SWIG_AsVal_int(obj2, &val3);
+  if (!SWIG_IsOK(ecode3)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "stream_eval_LS_periodogram" "', argument " "3"" of type '" "int""'");
+  } 
+  arg3 = static_cast< int >(val3);
+  ecode4 = SWIG_AsVal_float(obj3, &val4);
+  if (!SWIG_IsOK(ecode4)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode4), "in method '" "stream_eval_LS_periodogram" "', argument " "4"" of type '" "float""'");
+  } 
+  arg4 = static_cast< float >(val4);
+  ecode5 = SWIG_AsVal_float(obj4, &val5);
+  if (!SWIG_IsOK(ecode5)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode5), "in method '" "stream_eval_LS_periodogram" "', argument " "5"" of type '" "float""'");
+  } 
+  arg5 = static_cast< float >(val5);
+  res6 = SWIG_ConvertPtr(obj5, &argp6,SWIGTYPE_p_float, 0 |  0 );
+  if (!SWIG_IsOK(res6)) {
+    SWIG_exception_fail(SWIG_ArgError(res6), "in method '" "stream_eval_LS_periodogram" "', argument " "6"" of type '" "float *""'"); 
+  }
+  arg6 = reinterpret_cast< float * >(argp6);
+  res7 = SWIG_ConvertPtr(obj6, &argp7,SWIGTYPE_p_float, 0 |  0 );
+  if (!SWIG_IsOK(res7)) {
+    SWIG_exception_fail(SWIG_ArgError(res7), "in method '" "stream_eval_LS_periodogram" "', argument " "7"" of type '" "float *""'"); 
+  }
+  arg7 = reinterpret_cast< float * >(argp7);
+  res8 = SWIG_ConvertPtr(obj7, &argp8,SWIGTYPE_p_float, 0 |  0 );
+  if (!SWIG_IsOK(res8)) {
+    SWIG_exception_fail(SWIG_ArgError(res8), "in method '" "stream_eval_LS_periodogram" "', argument " "8"" of type '" "float *""'"); 
+  }
+  arg8 = reinterpret_cast< float * >(argp8);
+  stream_eval_LS_periodogram(arg1,arg2,arg3,arg4,arg5,arg6,arg7,arg8);
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
 SWIGINTERN PyObject *_wrap_get_float_array(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   int arg1 ;
@@ -3608,6 +3792,98 @@ fail:
 }
 
 
+SWIGINTERN PyObject *_wrap_get_int_array(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  int arg1 ;
+  int val1 ;
+  int ecode1 = 0 ;
+  PyObject * obj0 = 0 ;
+  int *result = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:get_int_array",&obj0)) SWIG_fail;
+  ecode1 = SWIG_AsVal_int(obj0, &val1);
+  if (!SWIG_IsOK(ecode1)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode1), "in method '" "get_int_array" "', argument " "1"" of type '" "int""'");
+  } 
+  arg1 = static_cast< int >(val1);
+  result = (int *)get_int_array(arg1);
+  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_int, 0 |  0 );
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_get_ival(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  int *arg1 = (int *) 0 ;
+  int arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  int result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:get_ival",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_int, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "get_ival" "', argument " "1"" of type '" "int *""'"); 
+  }
+  arg1 = reinterpret_cast< int * >(argp1);
+  ecode2 = SWIG_AsVal_int(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "get_ival" "', argument " "2"" of type '" "int""'");
+  } 
+  arg2 = static_cast< int >(val2);
+  result = (int)get_ival(arg1,arg2);
+  resultobj = SWIG_From_int(static_cast< int >(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_set_ival(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  int *arg1 = (int *) 0 ;
+  int arg2 ;
+  int arg3 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int val2 ;
+  int ecode2 = 0 ;
+  int val3 ;
+  int ecode3 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  PyObject * obj2 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OOO:set_ival",&obj0,&obj1,&obj2)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_int, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "set_ival" "', argument " "1"" of type '" "int *""'"); 
+  }
+  arg1 = reinterpret_cast< int * >(argp1);
+  ecode2 = SWIG_AsVal_int(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "set_ival" "', argument " "2"" of type '" "int""'");
+  } 
+  arg2 = static_cast< int >(val2);
+  ecode3 = SWIG_AsVal_int(obj2, &val3);
+  if (!SWIG_IsOK(ecode3)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "set_ival" "', argument " "3"" of type '" "int""'");
+  } 
+  arg3 = static_cast< int >(val3);
+  set_ival(arg1,arg2,arg3);
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
 SWIGINTERN PyObject *_wrap_get_block_size(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   int result;
@@ -3627,9 +3903,14 @@ static PyMethodDef SwigMethods[] = {
 	 { (char *)"set_frequency_params", _wrap_set_frequency_params, METH_VARARGS, NULL},
 	 { (char *)"eval_LS_periodogram", _wrap_eval_LS_periodogram, METH_VARARGS, NULL},
 	 { (char *)"bootstrap_LS_periodogram", _wrap_bootstrap_LS_periodogram, METH_VARARGS, NULL},
+	 { (char *)"batch_eval_LS_periodogram", _wrap_batch_eval_LS_periodogram, METH_VARARGS, NULL},
+	 { (char *)"stream_eval_LS_periodogram", _wrap_stream_eval_LS_periodogram, METH_VARARGS, NULL},
 	 { (char *)"get_float_array", _wrap_get_float_array, METH_VARARGS, NULL},
 	 { (char *)"get_val", _wrap_get_val, METH_VARARGS, NULL},
 	 { (char *)"set_val", _wrap_set_val, METH_VARARGS, NULL},
+	 { (char *)"get_int_array", _wrap_get_int_array, METH_VARARGS, NULL},
+	 { (char *)"get_ival", _wrap_get_ival, METH_VARARGS, NULL},
+	 { (char *)"set_ival", _wrap_set_ival, METH_VARARGS, NULL},
 	 { (char *)"get_block_size", _wrap_get_block_size, METH_VARARGS, NULL},
 	 { NULL, NULL, 0, NULL }
 };

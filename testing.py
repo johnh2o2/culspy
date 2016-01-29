@@ -1,12 +1,14 @@
 import culspy
 import numpy as np
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from math import cos
 from time import time
 
 culspy.initialize_cuda(0)
 
-Npoints = 10000
+Npoints = 100000
 Nbootstrap = 100
 
 def fudge(scale=0.1):
@@ -38,6 +40,7 @@ def test_bootstrap(t, x):
 def print_time(proc, t):
 	print "%-40s: %.4e (s) [ %.4e (s) per bootstrap ]"%(proc, t, t/Nbootstrap)
 
+
 def time_bootstrap(t, x):
 	t0 = time()
 	test_bootstrap(t, x)
@@ -55,6 +58,31 @@ def time_bootstrap(t, x):
 	t = time() - t0
 
 	print_time("culspy bootstrap (cpu max)", t)
+
+def test_batch(ts, xs, minf=0., maxf=1., Nf=10000):
+
+	Nlc = len(ts)
+	def print_time_batch(proc, t):
+		print "%-40s: %.4e (s) [ %.4e (s) per lightcurve ]"%(proc, t, t/Nlc)
+
+	t0 = time()
+	freqs, powers = culspy.LSPbatch(ts, xs, minf, maxf, Nf)
+	t = time() - t0
+
+	print_time_batch("culspy LSPbatch", t)
+
+	t0 = time()
+	freqs, powers = culspy.LSPstream(ts, xs, minf, maxf, Nf)
+	t = time() - t0
+
+	print_time_batch("culspy LSPstream", t)
+
+	t0 = time()
+	for T, X in zip(ts, xs):
+		freqs, powers = culspy.LSP(T, X, minf=minf, maxf=maxf, Nf=Nf)
+	t = time() - t0
+
+	print_time_batch("culspy LSP (python batching)", t)
 
 
 components = [ 
@@ -84,13 +112,26 @@ times = np.sort(times)
 
 x = np.array([ signal(t, components) for t in times])
 
+print "Testing the BATCH processing."
+Nbatch = 1000
+t_batch = []
+x_batch = []
+for i in range(Nbatch):
+	Np = int(np.random.random() * Npoints)
+	t0  = np.linspace(0,1, Np) + np.random.normal(scale=0.1, size=Np)
+	x0 = np.array([ signal(t, components) for t in t0])
+	x_batch.append(x0)
+	t_batch.append(t0)
+test_batch(t_batch, x_batch)
+
+
 print "getting original lsp"
 
-freqs, pows = culspy.LSP(times, x)
+freqs, pows = culspy.LSP(times, x, minf=0.1, maxf=20, Nf=10000)
 
 t0 = time()
 print "getting bootstrapped LSP heights"
-heights = culspy.LSPbootstrap(times, x, Nbootstrap=Nbootstrap)
+heights = culspy.LSPbootstrap(times, x, Nbootstrap=Nbootstrap,  minf=0.1, maxf=20, Nf=10000)
 dt = time() - t0
 print "  (%.3e s = %.3e s per bootstrap)"%(dt, dt/Nbootstrap)
 
