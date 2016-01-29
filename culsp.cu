@@ -55,7 +55,7 @@
 // Main program
 float *get_pinned_float_array(int n){
         float *x;
-        cudaMallocHost((void **) &x, n * sizeof(float)));
+        cudaMallocHost((void **) &x, n * sizeof(float));
         return x;
 }
 float get_pinned_val(float *x,int i){
@@ -337,7 +337,7 @@ batch_eval_LS_periodogram (int *N_t, int Nlc, int N_f, float df, float minf,
 
 void
 stream_eval_LS_periodogram (int *N_t, int Nlc, int N_f, float df, float minf, 
-         void *t, void *X, void *P)
+         float *t, float *X, float *P)
 {
 
   // Allocate device memory and copy data over
