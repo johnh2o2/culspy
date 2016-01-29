@@ -29,13 +29,13 @@ stream_eval_LS_periodogram (int *N_t, int Nlc, int N_f, float df, float minf,
   for(i=0; i < Nlc; i++){
     cudaStreamCreate(&streams[i])
 
-    CUDA_CALL(cudaMemcpyAsync(d_t[offset], t[offset], N_t[i] * sizeof(float), cudaMemcpyHostToDevice));
-    CUDA_CALL(cudaMemcpyAsync(d_X[offset], X[offset], N_t[i] * sizeof(float), cudaMemcpyHostToDevice));
+    CUDA_CALL(cudaMemcpyAsync(&d_t[offset], &t[offset], N_t[i] * sizeof(float), cudaMemcpyHostToDevice));
+    CUDA_CALL(cudaMemcpyAsync(&d_X[offset], &X[offset], N_t[i] * sizeof(float), cudaMemcpyHostToDevice));
     
     culsp_kernel_stream<<<grid_dim, block_dim, 0, streams[i]>>>(d_t, d_X, d_P, df, offset, 
                                                                             N_t[i], N_f, minf);
 
-    CUDA_CALL(cudaMemcpyAsync(P[i*N_f], d_P[i*N_f], N_f * sizeof(float), cudaMemcpyDeviceToHost));
+    CUDA_CALL(cudaMemcpyAsync(&P[i*N_f], &d_P[i*N_f], N_f * sizeof(float), cudaMemcpyDeviceToHost));
     offset += N_t[i];
   }
 
