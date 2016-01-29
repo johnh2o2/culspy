@@ -61,6 +61,7 @@ int get_block_size(){
 %}
 
 %pythoncode %{
+from time import time
 BLOCK_SIZE = _culspy.get_block_size()
 
 
@@ -210,9 +211,10 @@ def LSPbatch(t, x, minf, maxf, Nf, max_memory=4. ):
     cflat_p = _culspy.get_float_array(Nf * Nlc)
 
     cNts = _int_convert_to_c(Nts)
-  
+    t0 = time()
     _culspy.batch_eval_LS_periodogram(cNts, Nlc, Nf, df, minf, cflat_t, cflat_x, cflat_p)
-
+    t = time() - t0
+    print "     LSPbatch: time = %.3e s (%.3e s per lc)"%(t, t/Nlc)
     freqs = [ minf + df * i for i in range(Nf) ]
     all_power = _convert_to_py(cflat_p, Nf * Nlc)
     
@@ -246,9 +248,10 @@ def LSPstream(t, x, minf, maxf, Nf, max_memory=4. ):
     cflat_p = _culspy.get_pinned_float_array(Nf * Nlc)
 
     cNts = _int_convert_to_c(Nts)
-  
+    t0 = time()
     _culspy.stream_eval_LS_periodogram(cNts, Nlc, Nf, df, minf, cflat_t, cflat_x, cflat_p)
-
+    t = time() - t0
+    print "     LSPstream: time = %.3e s (%.3e s per lc)"%(t, t/Nlc)
     freqs = [ minf + df * i for i in range(Nf) ]
     all_power = _pinned_convert_to_py(cflat_p, Nf * Nlc)
     
@@ -282,8 +285,12 @@ def LSPdummy(t, x, minf, maxf, Nf, max_memory=4. ):
     cflat_p = _culspy.get_pinned_float_array(Nf * Nlc)
 
     cNts = _int_convert_to_c(Nts)
-  
+    
+    t0 = time()
     _culspy.dummy(cNts, Nlc, Nf, df, minf, cflat_t, cflat_x, cflat_p)
+    t = time() - t0
+
+    print "     LSPdummy: time = %.3e s (%.3e s per lc)"%(t, t/Nlc)
 
     freqs = [ minf + df * i for i in range(Nf) ]
     all_power = _pinned_convert_to_py(cflat_p, Nf * Nlc)
