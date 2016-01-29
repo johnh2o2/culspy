@@ -8,7 +8,7 @@ from time import time
 
 culspy.initialize_cuda(0)
 
-Npoints = 100000
+Npoints = 10000
 Nbootstrap = 100
 
 def fudge(scale=0.1):

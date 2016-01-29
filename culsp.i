@@ -232,8 +232,8 @@ def LSPstream(t, x, minf, maxf, Nf, max_memory=4. ):
 
     Nlc = len(t)
 
-    cflat_t = _convert_to_pinned_c(flat_t)
-    cflat_x = _convert_to_pinned_c(flat_x)
+    cflat_t = _convert_to_c_pinned(flat_t)
+    cflat_x = _convert_to_c_pinned(flat_x)
     cflat_p = _culspy.get_pinned_float_array(Nf * Nlc)
 
     cNts = _int_convert_to_c(Nts)
