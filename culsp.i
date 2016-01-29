@@ -8,6 +8,7 @@ extern void eval_LS_periodogram(int, int, float,float, float *, float *, float *
 extern void bootstrap_LS_periodogram(int, int, float,float,  float *, float *, float *, int, int);
 extern void batch_eval_LS_periodogram(int*, int, int, float, float, float *, float *, float *);
 extern void stream_eval_LS_periodogram(int*, int, int, float, float, float *, float *, float *);
+extern void dummy(int*, int, int, float, float, float *, float *, float *);
 extern float *get_pinned_float_array(int n);
 extern float get_pinned_val(float *x,int i);
 extern void set_pinned_val(float *x, int i, float val);
@@ -22,6 +23,7 @@ extern void eval_LS_periodogram(int, int, float,float,  float *, float *, float 
 extern void bootstrap_LS_periodogram(int, int, float,float,  float *, float *, float *, int, int);
 extern void batch_eval_LS_periodogram(int*, int, int, float, float, float *, float *, float *);
 extern void stream_eval_LS_periodogram(int*, int, int, float, float, float *, float *, float *);
+extern void dummy(int*, int, int, float, float, float *, float *, float *);
 extern float *get_pinned_float_array(int n);
 extern float get_pinned_val(float *x,int i);
 extern void set_pinned_val(float *x, int i, float val);
@@ -246,6 +248,42 @@ def LSPstream(t, x, minf, maxf, Nf, max_memory=4. ):
     cNts = _int_convert_to_c(Nts)
   
     _culspy.stream_eval_LS_periodogram(cNts, Nlc, Nf, df, minf, cflat_t, cflat_x, cflat_p)
+
+    freqs = [ minf + df * i for i in range(Nf) ]
+    all_power = _pinned_convert_to_py(cflat_p, Nf * Nlc)
+    
+    powers = []
+    for lcno in range(Nlc):
+        offset = sum([ n for i, n in enumerate(Nts) if i < lcno ])
+        powers.append([ all_power[i] for i in range(offset, offset + Nts[lcno]) ])
+        
+
+
+    return freqs, powers
+
+def LSPdummy(t, x, minf, maxf, Nf, max_memory=4. ):
+    if Nf is None or maxf is None or minf is None:
+        raise ValueError("Must give minf, maxf and Nf")
+
+    df = (maxf - minf)/Nf
+
+    Nts = [ len(T) for T in t ]
+    mem = get_memory_estimate(Nts, Nf) 
+    if mem > max_memory:
+        raise MemoryError("Memory estimate (%.3f GB) exceeds max_memory = %.3f GB"%(mem, max_memory))
+
+    flat_t = [ tval for T in t for tval in T  ]
+    flat_x = [ xval for X in x for xval in X  ]
+
+    Nlc = len(t)
+
+    cflat_t = _convert_to_c_pinned(flat_t)
+    cflat_x = _convert_to_c_pinned(flat_x)
+    cflat_p = _culspy.get_pinned_float_array(Nf * Nlc)
+
+    cNts = _int_convert_to_c(Nts)
+  
+    _culspy.dummy(cNts, Nlc, Nf, df, minf, cflat_t, cflat_x, cflat_p)
 
     freqs = [ minf + df * i for i in range(Nf) ]
     all_power = _pinned_convert_to_py(cflat_p, Nf * Nlc)

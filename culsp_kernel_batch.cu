@@ -22,6 +22,42 @@
 
 __global__ void
 __launch_bounds__(BLOCK_SIZE)
+dummy_kernel(float *d_t, float *d_X, float *d_P, float df, 
+                      int offset, int N_t, int N_f, float minf)
+{
+  /*
+  int id = blockIdx.x*BLOCK_SIZE+threadIdx.x;
+ 
+  int i;
+
+  if ( id >= N_f ) return;
+
+  __shared__ float s_t[BLOCK_SIZE];
+  __shared__ float s_X[BLOCK_SIZE];
+
+  // Calculate the frequency
+
+  float f = (id+1)*df + minf;
+
+  // Calculate the various sums
+
+  float XC = 0.f;
+  float XS = 0.f;
+  float CC = 0.f;
+  float CS = 0.f;
+
+  float XC_chunk = 0.f;
+  float XS_chunk = 0.f;
+  float CC_chunk = 0.f;
+  float CS_chunk = 0.f;
+
+  int j;
+  */
+  return;
+}
+
+__global__ void
+__launch_bounds__(BLOCK_SIZE)
 culsp_kernel_stream(float *d_t, float *d_X, float *d_P, float df, 
                       int offset, int N_t, int N_f, float minf)
 {
