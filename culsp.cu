@@ -267,7 +267,7 @@ dummy(int *N_t, int Nlc, int N_f, float df, float minf,
   // Finish
 
 }
-}
+
 ////
 // Periodogram evaluation
 ////
