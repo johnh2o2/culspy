@@ -58,6 +58,8 @@ python : culsp_wrap.o culsp.o periodogram_nomain.o
 	#mv _culspy.so culspy/
 	#touch culspy/__init__.py
 
+transfertest : transfertest.cu
+	$(NVCC) $(NVCCFLAGS) -o $@ $^ -I$(cuda_inc)
 #testminmax.o : testminmax.cu
 #	$(NVCC) $(NVCCFLAGS) -c -o $@ $^ -I$(cuda_inc)
 
