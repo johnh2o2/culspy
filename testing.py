@@ -84,6 +84,11 @@ def test_batch(ts, xs, minf=0., maxf=1., Nf=10000):
 
 	print_time_batch("culspy LSP (python batching)", t)
 
+	t0 = time()
+	freqs, powers = culspy.LSPdummy(ts, xs, minf, maxf, Nf)
+	t = time() - t0
+
+	print_time_batch("culspy LSPstream", t)
 
 components = [ 
 	{

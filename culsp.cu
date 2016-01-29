@@ -209,7 +209,7 @@ initialize_cuda (int device)
 
 
 void 
-dummy(int N_t, int N_f, float df, float minf, 
+dummy(int *N_t, int Nlc, int N_f, float df, float minf, 
          float *t, float *X, float *P)
 {
   // DOES NOTHING -- to time i/o stuff. 
