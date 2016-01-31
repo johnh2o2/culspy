@@ -3,6 +3,11 @@ from math import cos
 
 Nlcs = 10000
 Npoints = 10000
+Tbase = 7 * 365.
+fr = 1.
+amp = 1.0
+sigma = 0.5
+
 outroot="lcs/fake_%05d_N%d.dat"
 
 def fudge(scale=0.1):
@@ -21,20 +26,12 @@ for i in range(Nlcs):
 	print "Making fake lightcurve number ", i+1
 	components = [ 
 		{
-			'freq' : 10 * fudge(),
+			'freq' : fr * fudge(),
 			'amp'  : 1.0,
 			'phase' : 0.0
-		} ,
-		{
-			'freq' : 35 * fudge(),
-			'amp' : 0.6 * fudge(),
-			'phase' : -0.2 * fudge()
-		}
+		} 
 	]
 	
-
-	sigma = 0.5
-
 	times = np.linspace(0,1, Npoints) + np.random.normal(scale=0.1, size=Npoints)
 	times = np.sort(times)
 	times -= times[0]
