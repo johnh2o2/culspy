@@ -56,7 +56,7 @@ read_light_curve (char *filename, int N_t, float *t, float *X)
 
   FILE *file;
 
-  printf("Reading light curve from file %s\n", filename);
+  //printf("Reading light curve from file %s\n", filename);
 
   if((file = fopen(filename, "r")) == NULL) {
     printf("Unable to open file to read\n");
@@ -74,7 +74,7 @@ read_light_curve (char *filename, int N_t, float *t, float *X)
 
   fclose(file);
 
-  printf("Read in %d points in %s.\n", N_t, filename);
+  //printf("Read in %d points in %s.\n", N_t, filename);
 
   // Shift the time to have zero mean
 
@@ -217,7 +217,7 @@ initialize (int argc, char **argv, Settings *settings)
   struct arg_int *nfreq = arg_int1(NULL, "nfreq", "<N_frequencies>", 
                                             "number of frequencies to search");
 
-  struct arg_int *gpumax = arg_int0(NULL, "gpumax", "<use_gpu_to_get_max>", 
+  struct arg_lit *gpumax = arg_lit0(NULL, "gpumax,use-gpu-to-get-max", 
                                             "Use a GPU-reduce kernel to get the max of the LSP");
   struct arg_dbl *minf = arg_dbl1(NULL, "minf", "<min_frequency>", 
                                             "minimum freq to search");
@@ -227,15 +227,18 @@ initialize (int argc, char **argv, Settings *settings)
                                             "minimum SNR for peak of LSP");
 
   struct arg_file *in = arg_file0(NULL, "in", "<filename_in>", "input file");
-  struct arg_file *inlist = arg_file0(NULL, "list_in", "<list_in>", "list of input files");
+  struct arg_file *inlist = arg_file0(NULL, "list-in", "<list_in>", "list of input files");
   struct arg_file *out = arg_file1(NULL, "out", "<filename_out>", "output file");
   struct arg_dbl *over = arg_dbl0(NULL, "over", "<F_over>", "oversample factor");
   struct arg_dbl *high = arg_dbl0(NULL, "high", "<F_high>", "highest-frequency factor");
   struct arg_int *dev = arg_int0(NULL, "device", "<device>", "device number");
+  struct arg_lit *verb = arg_lit0("v", "verbose", "more output");
+  struct arg_lit *omax = arg_lit0(NULL, "only-get-max", 
+		"dont print periodogram, only find objects that have significant LS powers");
 
   struct arg_end *end = arg_end(20);
-  void *argtable[] = {inlist, nbootstraps, nfreq, minf, maxf, cutoff,
-                        in, out, over, high, dev, end};
+  void *argtable[] = {in, inlist, out, nfreq, minf, maxf, cutoff,
+                        nbootstraps, over, high, dev, gpumax, verb, omax, end};
 
   // Parse the command line
 
@@ -272,16 +275,18 @@ initialize (int argc, char **argv, Settings *settings)
     settings->df = (settings->maxf - settings->minf)/settings->Nfreq;
     settings->cutoff = (float) cutoff->dval[0];
 
-    settings->use_gpu_to_get_max = gpumax->count == 1 ? gpumax->ival[0] : 0;
-    settings->verbose = 1; // TODO: add this as commandline argument
-    settings->only_get_max = 1; // TODO: add this as commandline argument
+    settings->use_gpu_to_get_max = gpumax->count == 1 ? 1 : 0;
+    settings->verbose = verb->count == 1 ? 1 : 0; 
+    settings->only_get_max = omax->count == 1 ? 1 : 0; 
 
   }
   else {
-
-    printf("Syntax: %s", argv[0]);
-    arg_print_syntax(stdout, argtable, "\n");
-
+    fprintf(stderr,"PROBLEMS:\n");
+    arg_print_errors(stderr,end,"culsp");
+    //printf("Syntax: %s", argv[0]);
+    //arg_print_syntax(stdout, argtable, "\n");
+    fprintf(stderr, "HELP:\n");
+    arg_print_glossary(stderr, argtable, " %-25s %s\n");
     exit(EXIT_FAILURE);
 
   }

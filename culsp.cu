@@ -66,7 +66,6 @@ void set_pinned_val(float *x, int i, float val){
 void read_file_list(char *fname, char ***filenames, int *Nlc){
   FILE *file;
   *Nlc = get_nlines(fname);
-  printf("   read_file_list > Nlc = %d\n", *Nlc);
   int i;
 
   *filenames = (char **)malloc(*Nlc * sizeof(char *));
@@ -108,24 +107,24 @@ main( int argc, char** argv)
 
   // Read the list of light curves if there is one...
   if (settings.using_list){
-    printf("reading list..\n");
+    if(settings.verbose) printf("reading list..\n");
     read_file_list(settings.filenames[INLIST], &lc_filenames, &Nlc);
   } else {
     // otherwise initialize the variables by hand
-    printf("reading %s..\n", settings.filenames[IN]);
+    if(settings.verbose) printf("reading %s..\n", settings.filenames[IN]);
     Nlc = 1;
     lc_filenames = (char **)malloc(Nlc * sizeof(char *));
     lc_filenames[0] = (char *)malloc(STRLEN * sizeof(char));
     strcpy(lc_filenames[0], settings.filenames[IN]);
   }
 
-  printf("done (%d lcs)\n", Nlc);
+  if (settings.verbose) printf("done (%d lcs)\n", Nlc);
 
-  printf("initializing cuda ..\n");
+  if (settings.verbose) printf("initializing cuda ..\n");
   // Initialize CUDA
   initialize_cuda(settings.device);
 
-  printf("counting how much data is in each lc..\n");
+  if (settings.verbose) printf("counting how much data is in each lc..\n");
   // Count total number of observations
   clock_t start = clock(), diff;
   float dt, io;
@@ -137,7 +136,7 @@ main( int argc, char** argv)
   }
   
   
-  printf("done. %d datapoints\n", total_size);
+  if (settings.verbose) printf("done. %d datapoints\n", total_size);
 
   float best_matches[2*Nlc];
   for (i=0; i<2*Nlc; i++ ) best_matches[i] = -1;
@@ -149,13 +148,13 @@ main( int argc, char** argv)
 
   // now read in the lightcurve data
   for(i=0; i<Nlc; i++){
-    printf("reading lc %s..\n", lc_filenames[i]);
+    if (settings.verbose) printf("reading lc %s..\n", lc_filenames[i]);
     read_light_curve(lc_filenames[i], N_t[i], &t[offset], &X[offset]);
-    printf("    .. done (%d points)\n", N_t[i]);
+    if (settings.verbose) printf("    .. done (%d points)\n", N_t[i]);
     offset += N_t[i];
   }
 
-  printf("now computing LSP ..\n");
+  if (settings.verbose) printf("now computing LSP ..\n");
   // Evaluate the Lomb-Scargle periodogram
   compute_LSP_async(N_t, Nlc, &settings, t, X, P, best_matches);
   diff = clock() - start;
@@ -164,8 +163,9 @@ main( int argc, char** argv)
 
   printf("done! (%.3e s / lightcurve)\n", io);
   //// Write the data to file
+  FILE *out = fopen(settings.filenames[OUT], "w");
   for(i=0; i<Nlc; i++){
-    printf("%-50s %-10.3e %-10.3e\n", lc_filenames[i], 
+    fprintf(out, "%-50s %-10.3e %-10.3e\n", lc_filenames[i], 
                     best_matches[2*i], best_matches[2*i + 1]);
     /*if (settings.only_get_max){
       offset = 2*i;
@@ -179,6 +179,7 @@ main( int argc, char** argv)
       write_periodogram(filename_out, N_f, df, P);
     }*/
   }
+  fclose(out);
 
   // Free up space
 
