@@ -357,7 +357,7 @@ compute_LSP_async (int *N_t, int Nlc, Settings *settings,
   // handle bootstrapping 
   if (Nbootstraps > 0){
     float max_heights[N_f], mu, std, maxp;
-    int besti;
+    int besti, j;
 
     offset = 0;
     for(i=0; i<Nlc; i++){
@@ -367,9 +367,11 @@ compute_LSP_async (int *N_t, int Nlc, Settings *settings,
       // now calculate the mean + std of that distro.
       cpu_stats(max_heights, N_f, &mu, &std);
 
-      printf("    mu = %.3e  std = %.3e  max_heights[0] = %.3e\n",
-               mu, std, max_heights[0]);
-
+      //printf("    mu = %.3e  std = %.3e  max_heights[0] = %.3e\n",
+      //         mu, std, max_heights[0]);
+      for (j= 0; j < Nbootstraps; j++) printf("max_heights[%-4d] = %.4f; ", j, max_heights[j]); 
+      exit(EXIT_FAILURE);
+    
       // find the highest peak of the LSP
       if (use_gpu_to_get_max || only_get_max){
         gpu_maxf_ind(&d_P[i*N_f], N_f, &maxp, &besti);
@@ -455,10 +457,11 @@ bootstrap_LSP(int N_t, Settings *settings,
 
 
     if (settings->use_gpu_to_get_max){
+      printf(" USING GPU FOR MAX!\n");
       gpu_maxf_ind(d_P, N_f, &val, &imax);
 
     } else {
-
+      printf(" USING cpu FOR MAX!\n");
       CUDA_CALL(cudaMemcpy(P, d_P, N_f*sizeof(float), cudaMemcpyDeviceToHost));
       val = cpu_maxf(P, N_f); 
     }
