@@ -368,7 +368,7 @@ compute_LSP_async (int *N_t, int Nlc, Settings *settings,
       cpu_stats(max_heights, N_f, &mu, &std);
 
       printf("    mu = %.3e  std = %.3e  max_heights[0] = %.3e\n",
-               mu, std, max_heights[0])
+               mu, std, max_heights[0]);
 
       // find the highest peak of the LSP
       if (use_gpu_to_get_max || only_get_max){
