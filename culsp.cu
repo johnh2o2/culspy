@@ -151,7 +151,7 @@ main( int argc, char** argv)
   // Evaluate the Lomb-Scargle periodogram
   compute_LSP_async(N_t, Nlc, &settings, t, X, P, best_matches);
 
-  print("done!\n");
+  printf("done!\n");
   //// Write the data to file
   for(i=0; i<Nlc; i++){
     if (settings.only_get_max){
@@ -285,6 +285,7 @@ compute_LSP_async (int *N_t, int Nlc, Settings *settings,
   float df = settings->df;
   int Nbootstraps = settings->Nbootstraps;
   int only_get_max = settings->only_get_max;
+  int use_gpu_to_get_max = settings->use_gpu_to_get_max;
 
   float *d_t;
   float *d_X;
