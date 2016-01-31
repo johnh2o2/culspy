@@ -103,20 +103,18 @@ main( int argc, char** argv)
   initialize(argc, argv, &settings);
 
   printf("reading list..\n");
+  
   // Read the list of light curves if there is one...
   if (settings.using_list){
     read_file_list(settings.filenames[INLIST], &lc_filenames, &Nlc);
-  }
-
-  printf("done (%d lcs)\n", Nlc);
-  // otherwise initialize the variables by hand
-  else{
+  } else {
+    // otherwise initialize the variables by hand
     Nlc = 1;
     lc_filenames = (char **)malloc(Nlc * sizeof(char *));
     lc_filenames[0] = (char *)malloc(STRLEN * sizeof(char));
     strcpy(lc_filenames[0], settings.filenames[IN]);
   }
-  
+  printf("done (%d lcs)\n", Nlc);
   printf("counting how much data is in each lc..\n");
   // Count total number of observations
   N_t = (int *)malloc(Nlc * sizeof(int));
