@@ -76,7 +76,7 @@ void read_file_list(char *fname, char ***filenames, int *Nlc){
 
   for(i=0; i<*Nlc; i++){
     (*filenames)[i] = (char *)malloc(STRLEN * sizeof(char));
-    fscanf(file, "%s ", (*filenames)[i]));
+    fscanf(file, "%s ", (*filenames)[i]);
   }
 
   fclose(file);
