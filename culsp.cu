@@ -141,7 +141,7 @@ main( int argc, char** argv)
 
   //// Write the data to file
   for(i=0; i<Nlc; i++){
-    if (settings->only_get_max){
+    if (settings.only_get_max){
       offset = 2*i;
       freq = best_matches[offset];
       p = best_matches[offset+1];
@@ -269,7 +269,6 @@ compute_LSP_async (int *N_t, int Nlc, Settings *settings,
   
   int N_f = settings->Nfreq;
   float minf =settings->minf;
-  float maxf = settings->maxf;
   float df = settings->df;
   int Nbootstraps = settings->Nbootstraps;
   int only_get_max = settings->only_get_max;
@@ -406,9 +405,12 @@ bootstrap_LSP(int N_t, Settings *settings,
   float *P;
   int i, gd, imax;
   float val;
+  float df = settings->df;
+  float minf = settings->minf;
+  int N_f = settings->Nfreq;
+  int N_bootstrap = settings->Nbootstraps;
 
   curandState *state;
-  cudaError_t err; 
 
   CUDA_CALL(cudaMalloc((void**) &d_P, N_f*sizeof(float)));
 
@@ -441,7 +443,7 @@ bootstrap_LSP(int N_t, Settings *settings,
     //CUDA_ERR_CHECK();
 
 
-    if (use_gpu_to_get_max){
+    if (settings->use_gpu_to_get_max){
       gpu_maxf_ind(d_P, N_f, &val, &imax);
 
     } else {
