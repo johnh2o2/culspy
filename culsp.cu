@@ -167,14 +167,14 @@ main( int argc, char** argv)
   for(i=0; i<Nlc; i++){
     printf("%-50s %-10.3e %-10.3e\n", lc_filenames[i], 
                     best_matches[2*i], best_matches[2*i + 1]);
-    if (settings.only_get_max){
+    /*if (settings.only_get_max){
       offset = 2*i;
       freq = best_matches[offset];
       p = best_matches[offset+1];
       if (p > 0){
         printf("%-50s %-10.3e %-10.3e\n", lc_filenames[i], freq, p);
       }
-    } /*else {
+    }*/ /*else {
       char outname = 
       write_periodogram(filename_out, N_f, df, P);
     }*/
