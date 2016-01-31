@@ -103,13 +103,15 @@ main( int argc, char** argv)
   // Initialize
   initialize(argc, argv, &settings);
 
-  printf("reading list..\n");
+  
 
   // Read the list of light curves if there is one...
   if (settings.using_list){
+    printf("reading list..\n");
     read_file_list(settings.filenames[INLIST], &lc_filenames, &Nlc);
   } else {
     // otherwise initialize the variables by hand
+    printf("reading %s..\n", settings.filenames[IN]);
     Nlc = 1;
     lc_filenames = (char **)malloc(Nlc * sizeof(char *));
     lc_filenames[0] = (char *)malloc(STRLEN * sizeof(char));

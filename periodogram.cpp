@@ -49,6 +49,27 @@ int get_nlines(char *filename){
   return nlines;
 }
 
+int get_nlines_raw(char *filename){
+  int nlines = 0;
+  FILE *file;
+
+  if((file = fopen(filename, "r")) == NULL) {
+    printf("Unable to open file to read\n");
+    exit(1);
+  }
+  
+  double dummy;
+  int c;
+
+  while ((c = fgetc(file)) != EOF) {
+    if (c == '\n') nlines++;
+  }
+
+  fclose(file);
+
+  return nlines;
+}
+
 void
 read_light_curve (char *filename, int N_t, float *t, float *X)
 {
