@@ -433,7 +433,7 @@ bootstrap_LSP(int N_t, Settings *settings,
   CUDA_CALL(cudaMalloc((void **) &state, gd*BLOCK_SIZE * sizeof(curandState)));
   setup_curand_kernel<<<grid_dim, block_dim>>>(state, time(NULL));
   
-  if (!use_gpu_to_get_max){
+  if (!(settings->use_gpu_to_get_max)){
     P = (float *) malloc(N_f * sizeof(float));
   }
 
