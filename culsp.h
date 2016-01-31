@@ -13,7 +13,6 @@ typedef struct {
   
 } Settings;
 
-void initialize(int, Settings *settings);
 void initialize_cuda(int);
 void eval_LS_periodogram(int, int, float, float, float *, float *, float *);
 //void batch_eval_LS_periodogram(int*, int, int, float, float, float *, float *, float *);

@@ -61,21 +61,21 @@ void set_pinned_val(float *x, int i, float val){
         x[i] = val;
 }
 
-void read_file_list(char *fname, char ***filenames, int Nlc){
+void read_file_list(char *fname, char ***filenames, int *Nlc){
   FILE *file;
   *Nlc = get_nlines(fname);
   int i;
 
-  *lc_filenames = (char **)malloc(*Nlc * sizeof(char *));
+  *filenames = (char **)malloc(*Nlc * sizeof(char *));
 
-  if((file = fopen(filename, "r")) == NULL) {
+  if((file = fopen(fname, "r")) == NULL) {
     printf("Unable to open file to read\n");
     exit(1);
   }
 
   for(i=0; i<*Nlc; i++){
-    (*lc_filenames)[i] = (char *)malloc(STRLEN * sizeof(char));
-    fscanf(file, "%s ", *lc_filenames + i*STRLEN);
+    (*filenames)[i] = (char *)malloc(STRLEN * sizeof(char));
+    fscanf(file, "%s ", *filenames + i*STRLEN);
   }
 
   fclose(file);
@@ -102,7 +102,7 @@ main( int argc, char** argv)
 
   // Read the list of light curves if there is one...
   if (settings->using_list){
-    read_file_list(settings->filenames[LIST], &lc_filenames, &Nlc);
+    read_file_list(settings->filenames[INLIST], &lc_filenames, &Nlc);
   }
   // otherwise initialize the variables by hand
   else{

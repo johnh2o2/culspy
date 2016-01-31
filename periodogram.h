@@ -19,6 +19,8 @@
 #define _PERIODOGRAM_H_
 
 void read_light_curve (char *, int *, float **, float **);
+int get_nlines(char *filename);
+void initialize (int argc, char **argv, Settings *settings);
 void write_periodogram (char *, int, float, float *);
 void set_frequency_params (int, float *, float, float, int *, float *);
 double get_time ();

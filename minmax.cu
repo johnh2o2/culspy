@@ -2,7 +2,7 @@
 #ifndef _MINMAX_
 #define _MINMAX_
 
-
+#include<float.h>
 
 __device__ float atomicMaxf(float* address, float val)
 {
@@ -17,7 +17,7 @@ __device__ float atomicMaxf(float* address, float val)
 }
 
 __global__ void init_dinds( float *d_inds, int N){
-    int gid = (blockDim.x * blockIdx.x) + tid;
+    int gid = (blockDim.x * blockIdx.x) + threadIdx.x;
     d_inds[gid] = gid;   
 }
 
@@ -75,7 +75,7 @@ __global__ void max_reduce_with_index( float* d_array, int *d_inds,
     while (gid < elements) {
         if (d_array[gid]> block_max[tid]){
             block_imax[tid] = d_inds[gid];
-            block_max[tid] = d_array[gid]
+            block_max[tid] = d_array[gid];
         }
         gid += gridDim.x*blockDim.x;
     }
@@ -101,7 +101,7 @@ __global__ void max_reduce_with_index( float* d_array, int *d_inds,
     
 }
 
-#include<float.h>
+
 
 float cpu_maxf(float *x, int n){
   int i;
@@ -143,8 +143,9 @@ cpu_stats(float *x, int N, float *mu, float *std){
 void 
 gpu_maxf_ind(float *d_X, int N, float *m, int *ind){
   
-  int gd = N/BLOCK_SIZE, gdm, gmd0;
-  float *d_imaxbuf, *d_maxbuf, *d_inds;
+  int gd = N/BLOCK_SIZE, gdm, gdm0;
+  float *d_imaxbuf, *d_maxbuf;
+  int *d_inds;
 
 
   while (gd * BLOCK_SIZE < N) gd += 1;
@@ -157,7 +158,7 @@ gpu_maxf_ind(float *d_X, int N, float *m, int *ind){
 
   // calculate the maximum.
   init_dinds<<<grid_dim, block_dim>>>(d_inds, gd);
-  max_reduce_with_index<<<grid_dim, block_dim>>>(d_P, d_inds, d_maxbuf, d_imaxbuf, N_f);
+  max_reduce_with_index<<<grid_dim, block_dim>>>(d_X, d_inds, d_maxbuf, d_imaxbuf, N);
   
   // Now reduce until only one block is needed.
   gdm = gd;
@@ -175,8 +176,8 @@ gpu_maxf_ind(float *d_X, int N, float *m, int *ind){
   }
 
   //copy max(P) to the host
-  CUDA_CALL(cudaMemcpy(m, d_maxbuf, sizeof(float), cudaMemcpyDeviceToHost));
-  CUDA_CALL(cudaMemcpy(ind, d_imaxbuf, sizeof(int), cudaMemcpyDeviceToHost));
+  cudaMemcpy(m, d_maxbuf, sizeof(float), cudaMemcpyDeviceToHost);
+  cudaMemcpy(ind, d_imaxbuf, sizeof(int), cudaMemcpyDeviceToHost);
 
   cudaFree(d_imaxbuf);
   cudaFree(d_maxbuf);
