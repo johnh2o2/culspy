@@ -1,88 +1,7 @@
 
 #ifndef _MINMAX_
 #define _MINMAX_
-#include<float.h>
 
-float cpu_maxf(float *x, int n){
-  int i;
-  float m = -FLT_MIN;
-  for(i=0; i<n; i++) if (x[i] > m) m = x[i];
-
-  return m;
-}
-
-void
-cpu_maxf_ind(float *x, int N, float *m, int *ind){
-  int i;
-  *m = x[0];
-  *ind = 0;
-  for(i=0; i< N; i++){
-    if (x[i] > *m) {
-      *m = x[i];
-      *ind = i;
-    }
-  }
-}
-
-void 
-cpu_stats(float *x, int N, float *mu, float *std){
-  int i;
-  *mu = 0; *std = 0;
-  for (i=0; i<N; i++){
-    *mu += x[i];
-  }
-  *mu /= N;
-
-  for(i=0; i<N; i++){
-    *std += (x[i] - *mu) * (x[i] - *mu);
-  }
-  *std = sqrt(*std/N);
-}
-
-
-void 
-gpu_maxf_ind(float *d_X, int N, float *m, int *ind){
-  
-  int gd = N/BLOCK_SIZE, gdm, gmd0;
-  float *d_imaxbuf, *d_maxbuf, *d_inds;
-
-
-  while (gd * BLOCK_SIZE < N) gd += 1;
-  dim3 grid_dim(gd, 1, 1);
-  dim3 block_dim(BLOCK_SIZE, 1, 1);
-    
-  cudaMalloc((void **) &d_imaxbuf, gd * sizeof(float));
-  cudaMalloc((void **) &d_maxbuf, gd * sizeof(float));
-  cudaMalloc((void **) &d_inds, N * sizeof(int));
-
-  // calculate the maximum.
-  init_dinds<<<grid_dim, block_dim>>>(d_inds, gd);
-  max_reduce_with_index<<<grid_dim, block_dim>>>(d_P, d_inds, d_maxbuf, d_imaxbuf, N_f);
-  
-  // Now reduce until only one block is needed.
-  gdm = gd;
-  while (gdm > 1){
-
-    gdm0 = gdm;
-    gdm /= BLOCK_SIZE;
-    if( gdm * BLOCK_SIZE < gdm0 ) gdm += 1;
-    
-    dim3 grid_dim_max(gdm, 1, 1);
-
-    max_reduce_with_index<<<grid_dim_max, block_dim>>>(d_maxbuf, d_imaxbuf, 
-                                      d_maxbuf, d_imaxbuf, gdm0);
-  
-  }
-
-  //copy max(P) to the host
-  CUDA_CALL(cudaMemcpy(m, d_maxbuf, sizeof(float), cudaMemcpyDeviceToHost));
-  CUDA_CALL(cudaMemcpy(ind, d_imaxbuf, sizeof(int), cudaMemcpyDeviceToHost));
-
-  cudaFree(d_imaxbuf);
-  cudaFree(d_maxbuf);
-  cudaFree(d_inds);
-
-}
 
 
 __device__ float atomicMaxf(float* address, float val)
@@ -180,6 +99,89 @@ __global__ void max_reduce_with_index( float* d_array, int *d_inds,
         d_imax[blockIdx.x] = block_imax[0];
     }
     
+}
+
+#include<float.h>
+
+float cpu_maxf(float *x, int n){
+  int i;
+  float m = -FLT_MIN;
+  for(i=0; i<n; i++) if (x[i] > m) m = x[i];
+
+  return m;
+}
+
+void
+cpu_maxf_ind(float *x, int N, float *m, int *ind){
+  int i;
+  *m = x[0];
+  *ind = 0;
+  for(i=0; i< N; i++){
+    if (x[i] > *m) {
+      *m = x[i];
+      *ind = i;
+    }
+  }
+}
+
+void 
+cpu_stats(float *x, int N, float *mu, float *std){
+  int i;
+  *mu = 0; *std = 0;
+  for (i=0; i<N; i++){
+    *mu += x[i];
+  }
+  *mu /= N;
+
+  for(i=0; i<N; i++){
+    *std += (x[i] - *mu) * (x[i] - *mu);
+  }
+  *std = sqrt(*std/N);
+}
+
+
+void 
+gpu_maxf_ind(float *d_X, int N, float *m, int *ind){
+  
+  int gd = N/BLOCK_SIZE, gdm, gmd0;
+  float *d_imaxbuf, *d_maxbuf, *d_inds;
+
+
+  while (gd * BLOCK_SIZE < N) gd += 1;
+  dim3 grid_dim(gd, 1, 1);
+  dim3 block_dim(BLOCK_SIZE, 1, 1);
+    
+  cudaMalloc((void **) &d_imaxbuf, gd * sizeof(float));
+  cudaMalloc((void **) &d_maxbuf, gd * sizeof(float));
+  cudaMalloc((void **) &d_inds, N * sizeof(int));
+
+  // calculate the maximum.
+  init_dinds<<<grid_dim, block_dim>>>(d_inds, gd);
+  max_reduce_with_index<<<grid_dim, block_dim>>>(d_P, d_inds, d_maxbuf, d_imaxbuf, N_f);
+  
+  // Now reduce until only one block is needed.
+  gdm = gd;
+  while (gdm > 1){
+
+    gdm0 = gdm;
+    gdm /= BLOCK_SIZE;
+    if( gdm * BLOCK_SIZE < gdm0 ) gdm += 1;
+    
+    dim3 grid_dim_max(gdm, 1, 1);
+
+    max_reduce_with_index<<<grid_dim_max, block_dim>>>(d_maxbuf, d_imaxbuf, 
+                                      d_maxbuf, d_imaxbuf, gdm0);
+  
+  }
+
+  //copy max(P) to the host
+  CUDA_CALL(cudaMemcpy(m, d_maxbuf, sizeof(float), cudaMemcpyDeviceToHost));
+  CUDA_CALL(cudaMemcpy(ind, d_imaxbuf, sizeof(int), cudaMemcpyDeviceToHost));
+
+  cudaFree(d_imaxbuf);
+  cudaFree(d_maxbuf);
+  cudaFree(d_inds);
+
 }
 
 #endif
