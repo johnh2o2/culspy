@@ -62,8 +62,7 @@ culsp_kernel_stream(float *d_t, float *d_X, float *d_P, float df,
                                           int N_t, int N_f, float minf)
 {
   int id = blockIdx.x*BLOCK_SIZE+threadIdx.x;
- 
-  int i;
+
 
   if ( id >= N_f ) return;
 

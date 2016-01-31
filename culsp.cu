@@ -101,22 +101,22 @@ main( int argc, char** argv)
   initialize(argc, argv, &settings);
 
   // Read the list of light curves if there is one...
-  if (settings->using_list){
-    read_file_list(settings->filenames[INLIST], &lc_filenames, &Nlc);
+  if (settings.using_list){
+    read_file_list(settings.filenames[INLIST], &lc_filenames, &Nlc);
   }
   // otherwise initialize the variables by hand
   else{
     Nlc = 1;
     lc_filenames = (char **)malloc(Nlc * sizeof(char *));
     lc_filenames[0] = (char *)malloc(STRLEN * sizeof(char));
-    strcpy(lc_filenames[0], settings->filenames[IN]);
+    strcpy(lc_filenames[0], settings.filenames[IN]);
   }
   
   // Count total number of observations
   N_t = (int *)malloc(Nlc * sizeof(int));
   int offset = 0, total_size=0;
   for(i=0; i<Nlc; i++){
-    get_nlines(lc_filenames[i], &N_t[i]);
+    N_t[i] = get_nlines(lc_filenames[i]);
     total_size += N_t[i];
   }
 
@@ -125,7 +125,7 @@ main( int argc, char** argv)
 
   CUDA_CALL(cudaMallocHost((void **) &t, total_size * sizeof(float)));
   CUDA_CALL(cudaMallocHost((void **) &X, total_size * sizeof(float)));
-  CUDA_CALL(cudaMallocHost((void **) &P, Nlc * settings->Nfreq * sizeof(float)));
+  CUDA_CALL(cudaMallocHost((void **) &P, Nlc * settings.Nfreq * sizeof(float)));
 
   // now read in the lightcurve data
   for(i=0; i<Nlc; i++){

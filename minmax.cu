@@ -16,7 +16,7 @@ __device__ float atomicMaxf(float* address, float val)
     return __int_as_float(old);
 }
 
-__global__ void init_dinds( float *d_inds, int N){
+__global__ void init_dinds( int *d_inds, int N){
     int gid = (blockDim.x * blockIdx.x) + threadIdx.x;
     d_inds[gid] = gid;   
 }
