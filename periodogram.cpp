@@ -30,7 +30,7 @@
 ////
 
 int get_nlines(char *filename){
-  int nlines = 0;
+  int nlines = 0, c;
   FILE *file;
 
   if((file = fopen(filename, "r")) == NULL) {
@@ -38,29 +38,6 @@ int get_nlines(char *filename){
     exit(1);
   }
   
-  double dummy;
-
-  while (fscanf(file, "%lf %lf", &dummy, &dummy) != EOF) {
-    nlines++;
-  }
-
-  fclose(file);
-
-  return nlines;
-}
-
-int get_nlines_raw(char *filename){
-  int nlines = 0;
-  FILE *file;
-
-  if((file = fopen(filename, "r")) == NULL) {
-    printf("Unable to open file to read\n");
-    exit(1);
-  }
-  
-  double dummy;
-  int c;
-
   while ((c = fgetc(file)) != EOF) {
     if (c == '\n') nlines++;
   }
