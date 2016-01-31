@@ -452,11 +452,9 @@ bootstrap_LSP(int N_t, Settings *settings,
 
 
     if (settings->use_gpu_to_get_max){
-      printf(" USING GPU FOR MAX!\n");
       gpu_maxf_ind(d_P, N_f, &val, &imax);
 
     } else {
-      printf(" USING cpu FOR MAX!\n");
       CUDA_CALL(cudaMemcpy(P, d_P, N_f*sizeof(float), cudaMemcpyDeviceToHost));
       val = cpu_maxf(P, N_f); 
     }
