@@ -130,10 +130,10 @@ cpu_stats(float *x, int N, float *mu, float *std){
   *mu = 0; *std = 0;
   for (i=0; i<N; i++){
     *mu += x[i];
-    printf("%.3f\n", *mu)
+    printf("%.3f\n", *mu);
   }
   *mu /= N;
-  printf("%.3f\n", *mu)
+  printf("%.3f\n", *mu);
 
   for(i=0; i<N; i++){
     *std += (x[i] - *mu) * (x[i] - *mu);
