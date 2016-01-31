@@ -26,6 +26,7 @@
 #include "culsp_kernel.cu"
 #include "culsp_kernel_batch.cu"
 #include "minmax.cu"
+#include <time.h>
 
 
 // Wrapper macros
@@ -99,7 +100,7 @@ main( int argc, char** argv)
   float *P;
   float freq, p;
 
-  printf("initializing..\n");
+  //printf("initializing..\n");
   // Initialize
   initialize(argc, argv, &settings);
 
@@ -117,15 +118,25 @@ main( int argc, char** argv)
     lc_filenames[0] = (char *)malloc(STRLEN * sizeof(char));
     strcpy(lc_filenames[0], settings.filenames[IN]);
   }
+
   printf("done (%d lcs)\n", Nlc);
+
+  printf("initializing cuda ..\n");
+  // Initialize CUDA
+  initialize_cuda(settings.device);
+
   printf("counting how much data is in each lc..\n");
   // Count total number of observations
+  clock_t start = clock(), diff;
+  float dt, io;
   N_t = (int *)malloc(Nlc * sizeof(int));
   int offset = 0, total_size=0;
   for(i=0; i<Nlc; i++){
     N_t[i] = get_nlines(lc_filenames[i]);
     total_size += N_t[i];
   }
+  
+  
   printf("done. %d datapoints\n", total_size);
 
   float best_matches[2*Nlc];
@@ -144,15 +155,14 @@ main( int argc, char** argv)
     offset += N_t[i];
   }
 
-  printf("initializing cuda ..\n");
-  // Initialize CUDA
-  initialize_cuda(settings.device);
-		 
   printf("now computing LSP ..\n");
   // Evaluate the Lomb-Scargle periodogram
   compute_LSP_async(N_t, Nlc, &settings, t, X, P, best_matches);
+  diff = clock() - start;
+  dt = ((float) diff) / CLOCKS_PER_SEC;
+  io = dt / Nlc;
 
-  printf("done!\n");
+  printf("done! (%.3e s / lightcurve)\n", io);
   //// Write the data to file
   for(i=0; i<Nlc; i++){
     printf("%-50s %-10.3e %-10.3e\n", lc_filenames[i], 
@@ -289,6 +299,7 @@ compute_LSP_async (int *N_t, int Nlc, Settings *settings,
   int Nbootstraps = settings->Nbootstraps;
   int only_get_max = settings->only_get_max;
   int use_gpu_to_get_max = settings->use_gpu_to_get_max;
+  int v = settings->verbose;
 
   float *d_t;
   float *d_X;
@@ -300,7 +311,7 @@ compute_LSP_async (int *N_t, int Nlc, Settings *settings,
 
   for (i=0; i<Nlc; i++) total_size += N_t[i];
 
-  printf(" compute_LSP_async > here. setting up.\n");
+  if (v) printf(" compute_LSP_async > here. setting up.\n");
   
   // Allocate device memory
   CUDA_CALL(cudaMalloc((void**) &d_t, total_size*sizeof(float)));
@@ -314,11 +325,10 @@ compute_LSP_async (int *N_t, int Nlc, Settings *settings,
   dim3 grid_dim(gd, 1, 1);
   dim3 block_dim(BLOCK_SIZE, 1, 1);
 
-  printf(" compute_LSP_async > done.\n");
+  if (v) printf(" compute_LSP_async > done.\n");
   // asynchronously transfer data and perform LSP on all lightcurves
   offset = 0;
   for(i=0; i < Nlc; i++){
-    printf(" compute_LSP_async > started lc %d.\n", i);
     cudaStreamCreate(&streams[i]);
 
     CUDA_CALL(cudaMemcpyAsync(&d_t[offset], &t[offset], N_t[i] * sizeof(float), 
@@ -339,11 +349,11 @@ compute_LSP_async (int *N_t, int Nlc, Settings *settings,
    
     offset += N_t[i];
   }
-  printf(" compute_LSP_async > now we wait..\n");
+  if (v) printf(" compute_LSP_async > all commands issued. now we wait..\n");
   // wait for everyone
   CUDA_CALL( cudaDeviceSynchronize() );
 
-  printf(" compute_LSP_async > done!\n");
+  if (v) printf(" compute_LSP_async > done!\n");
 
   // check for problems
   cudaError_t err = cudaGetLastError();
@@ -381,12 +391,12 @@ compute_LSP_async (int *N_t, int Nlc, Settings *settings,
       matches[2*i + 1] = maxp;
 
       // if significant, record it
-      if ( maxp > settings->cutoff){
-        if (settings->verbose)
-          printf("  PEAK FOUND! (%d) freq = %.4e ; snr = %.4e\n", 
-                                    i, matches[2*i], matches[2*i+1]);
+      //if ( maxp > settings->cutoff){
+        //if (settings->verbose)
+        //  printf("  PEAK FOUND! (%d) freq = %.4e ; snr = %.4e\n", 
+        //                            i, matches[2*i], matches[2*i+1]);
         
-      }
+      //}
       offset += N_t[i];
     }
   }
