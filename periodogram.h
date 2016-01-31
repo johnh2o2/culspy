@@ -18,6 +18,8 @@
 #ifndef _PERIODOGRAM_H_
 #define _PERIODOGRAM_H_
 
+#include "culsp.h"
+
 void read_light_curve (char *, int , float **, float **);
 int get_nlines(char *filename);
 void initialize (int argc, char **argv, Settings *settings);

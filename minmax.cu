@@ -144,15 +144,15 @@ void
 gpu_maxf_ind(float *d_X, int N, float *m, int *ind){
   
   int gd = N/BLOCK_SIZE, gdm, gdm0;
-  float *d_imaxbuf, *d_maxbuf;
-  int *d_inds;
+  float *d_maxbuf;
+  int *d_inds, *d_imaxbuf;
 
 
   while (gd * BLOCK_SIZE < N) gd += 1;
   dim3 grid_dim(gd, 1, 1);
   dim3 block_dim(BLOCK_SIZE, 1, 1);
     
-  cudaMalloc((void **) &d_imaxbuf, gd * sizeof(float));
+  cudaMalloc((void **) &d_imaxbuf, gd * sizeof(int));
   cudaMalloc((void **) &d_maxbuf, gd * sizeof(float));
   cudaMalloc((void **) &d_inds, N * sizeof(int));
 

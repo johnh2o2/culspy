@@ -262,7 +262,7 @@ compute_LSP_batch (int *N_t, int Nlc, Settings settings,
 
 
 void 
-compute_LSP_async (int *N_t, int Nlc, Settings settings,
+compute_LSP_async (int *N_t, int Nlc, Settings *settings,
          float *t, float *X, float *P, float *matches)
 {
 
