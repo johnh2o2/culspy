@@ -169,7 +169,7 @@ main( int argc, char** argv)
 
   printf("done! (%.3e s / lightcurve; %.3e s (computational) )\n", io, io2);
   //// Write the data to file
-  FILE *out = fopen(settings.filenames[OUT], "w")
+  FILE *out = fopen(settings.filenames[OUT], "w");
   for(i=0; i<Nlc; i++){
     fprintf(out, "%-50s %-10.3e %-10.3e\n", lc_filenames[i], 
                     best_matches[2*i], best_matches[2*i + 1]);
