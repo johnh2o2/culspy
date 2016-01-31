@@ -127,8 +127,8 @@ main( int argc, char** argv)
 
   printf("counting how much data is in each lc..\n");
   // Count total number of observations
-  clock_t start = clock(), diff;
-  float dt, io;
+  clock_t start = clock(), diff, start2, diff2;
+  float dt, io, dt2, io2;
   N_t = (int *)malloc(Nlc * sizeof(int));
   int offset = 0, total_size=0;
   for(i=0; i<Nlc; i++){
@@ -157,15 +157,23 @@ main( int argc, char** argv)
 
   printf("now computing LSP ..\n");
   // Evaluate the Lomb-Scargle periodogram
+  start2 = clock();
   compute_LSP_async(N_t, Nlc, &settings, t, X, P, best_matches);
   diff = clock() - start;
+  diff2 = diff + start - start2;
+
   dt = ((float) diff) / CLOCKS_PER_SEC;
   io = dt / Nlc;
 
-  printf("done! (%.3e s / lightcurve)\n", io);
+  dt2 = ((float) diff2)/ CLOCKS_PER_SEC;
+  io2 = dt2/Nlc;
+
+  printf("done! (%.3e s / lightcurve; %.3e s (computational) )\n", io, io2);
   //// Write the data to file
+
+  FILE *out = fopen(settings.filenames[OUT], "w")
   for(i=0; i<Nlc; i++){
-    printf("%-50s %-10.3e %-10.3e\n", lc_filenames[i], 
+    fprintf(out, "%-50s %-10.3e %-10.3e\n", lc_filenames[i], 
                     best_matches[2*i], best_matches[2*i + 1]);
     /*if (settings.only_get_max){
       offset = 2*i;
@@ -179,6 +187,7 @@ main( int argc, char** argv)
       write_periodogram(filename_out, N_f, df, P);
     }*/
   }
+  fclose(out);
 
   // Free up space
 
