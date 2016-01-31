@@ -155,6 +155,8 @@ main( int argc, char** argv)
   printf("done!\n");
   //// Write the data to file
   for(i=0; i<Nlc; i++){
+    printf("%-50s %-10.3e %-10.3e\n", lc_filenames[i], 
+                    best_matches[2*i], best_matches[2*i + 1]);
     if (settings.only_get_max){
       offset = 2*i;
       freq = best_matches[offset];
@@ -374,6 +376,9 @@ compute_LSP_async (int *N_t, int Nlc, Settings *settings,
 
       // -> SNR of that peak
       maxp = ((maxp - mu)/std);
+
+      matches[2*i] = minf + df * besti; // freq
+      matches[2*i + 1] = maxp;
 
       // if significant, record it
       if ( maxp > settings->cutoff){
