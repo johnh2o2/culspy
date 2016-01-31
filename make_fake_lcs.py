@@ -1,7 +1,7 @@
 import numpy as np
 from math import cos
 
-Nlcs = 10000
+Nlcs = 5000
 Npoints = 10000
 Tbase = 7 * 365.
 fr = 1.
@@ -16,7 +16,7 @@ def fudge(scale=0.1):
 def randind(N):
 	return int(N * np.random.random())
 
-def signal(t, components):
+def signal(t, components, sigma=sigma):
 	s = 0.0
 	for c in components:
 		s += c['amp'] * cos(2 * np.pi * (c['freq']*t - c['phase']))
@@ -27,12 +27,12 @@ for i in range(Nlcs):
 	components = [ 
 		{
 			'freq' : fr * fudge(),
-			'amp'  : 1.0,
+			'amp'  : amp,
 			'phase' : 0.0
 		} 
 	]
 	
-	times = np.linspace(0,1, Npoints) + np.random.normal(scale=0.1, size=Npoints)
+	times = np.linspace(0,Tbase, Npoints) + np.random.normal(scale=0.1, size=Npoints)
 	times = np.sort(times)
 	times -= times[0]
 
