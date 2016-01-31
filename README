@@ -11,3 +11,42 @@ system, I do not have a common.mk file anywhere.
 
 
 
+Train of thought
+================
+
+I'm working on integrating everything seamlessly using C
+
+From the looks of it, freq. spacing is important, and
+for a 10 year baseline, we're looking at df ~ O(1E-5),
+which gives us Nfreq ~ 10E5; a substantial number...
+
+The other option is to integrate a "fast" version
+using the techniques of "extirpolation + FFT" = FASPER
+or this new-fangled NFFT algorithm. The NFFT has a
+couple of ports to the GPU that I could find, but
+the simple, nice one doesn't contain an "adjoint"
+operation.  I'm crossing my fingers that its straightforward
+enough that I can just hack together an additional function
+and then convert the NFFTLS code to a cuNFFTLS code.
+
+The other one is wrapped up in this MRI
+package that contains a buttload of other things and
+that refuses to compile despite hours of manual dependency
+resolutions, etc.
+
+Timing considerations
+---------------------
+
+Where is the bottleneck? Data transfer? Computations? What
+happens if we up the frequency resolution to the "suggested"
+one?
+
+Can we implement a faster GPU version that utilizes the cuFFT
+stuff (serial frequency + GPU ffts?)
+
+Is it worth the effort?
+
+Want to get a "fast" search going that avoids transferring
+the full periodogram and only gives back the highest point
+	* Though maybe that makes more work later?
+

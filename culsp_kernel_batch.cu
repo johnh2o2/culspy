@@ -59,7 +59,7 @@ dummy_kernel(float *d_t, float *d_X, float *d_P, float df,
 __global__ void
 __launch_bounds__(BLOCK_SIZE)
 culsp_kernel_stream(float *d_t, float *d_X, float *d_P, float df, 
-                      int offset, int N_t, int N_f, float minf)
+                                          int N_t, int N_f, float minf)
 {
   int id = blockIdx.x*BLOCK_SIZE+threadIdx.x;
  
@@ -94,8 +94,8 @@ culsp_kernel_stream(float *d_t, float *d_X, float *d_P, float df,
 
     __syncthreads();
 
-    s_t[threadIdx.x] = d_t[offset + j+threadIdx.x];
-    s_X[threadIdx.x] = d_X[offset + j+threadIdx.x];
+    s_t[threadIdx.x] = d_t[j+threadIdx.x];
+    s_X[threadIdx.x] = d_X[j+threadIdx.x];
 
     __syncthreads();
 
@@ -139,8 +139,8 @@ culsp_kernel_stream(float *d_t, float *d_X, float *d_P, float df,
 
   if(j+threadIdx.x < N_t) {
 
-    s_t[threadIdx.x] = d_t[offset + j+threadIdx.x];
-    s_X[threadIdx.x] = d_X[offset + j+threadIdx.x];
+    s_t[threadIdx.x] = d_t[j+threadIdx.x];
+    s_X[threadIdx.x] = d_X[j+threadIdx.x];
 
   }
 

@@ -21,6 +21,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <sys/time.h>
+#include <argtable2.h>
 
 #include "periodogram.h"
 
@@ -28,11 +29,32 @@
 // Read a light curve from a file
 ////
 
+int get_nlines(char *filename){
+  int nlines = 0;
+  FILE *file;
+
+  if((file = fopen(filename, "r")) == NULL) {
+    printf("Unable to open file to read\n");
+    exit(1);
+  }
+  
+  double dummy;
+
+  while (fscanf(file, "%lf %lf", &dummy, &dummy) != EOF) {
+    nlines++;
+  }
+
+  fclose(file);
+
+  return nlines;
+}
+
 void
-read_light_curve (char *filename, int *N_t, float **t, float **X)
+read_light_curve (char *filename, int N_t, float **t, float **X)
 {
 
   // Open the file 
+
 
   FILE *file;
 
@@ -43,46 +65,30 @@ read_light_curve (char *filename, int *N_t, float **t, float **X)
     exit(1);
   }
 
-  // Count the number of lines
-
-  *N_t = 0;
-  double dummy;
-
-  while (fscanf(file, "%lf %lf", &dummy, &dummy) != EOF) {
-    (*N_t)++;
-  }
-
-  // Allocate arrays (double-precision buffers to avoid roundoff)
-
-  *t = (float *) malloc(*N_t*sizeof(float));
-  *X = (float *) malloc(*N_t*sizeof(float));
-  
-  double *td = (double *) malloc(*N_t*sizeof(double));
-  double *Xd = (double *) malloc(*N_t*sizeof(double));
+  double *td = (double *) malloc(N_t*sizeof(double));
+  double *Xd = (double *) malloc(N_t*sizeof(double));
 
   // Read in the data
 
-  rewind(file);
-
-  for(int j = 0; j < *N_t; j++) {
+  for(int j = 0; j < N_t; j++) {
     fscanf(file, "%lf %lf", td+j, Xd+j);
   }
 
   fclose(file);
 
-  printf("Read in %d points\n", *N_t);
+  printf("Read in %d points in %s.\n", N_t, filename);
 
   // Shift the time to have zero mean
 
   double t_mean = 0.;
 
-  for(int j = 0; j < *N_t; j++) {
+  for(int j = 0; j < N_t; j++) {
     t_mean += td[j];
   }
 
-  t_mean /= *N_t;
+  t_mean /= N_t;
 
-  for(int j = 0; j < *N_t; j++) {
+  for(int j = 0; j < N_t; j++) {
     (*t)[j] = td[j] - t_mean;
   }
 
@@ -92,17 +98,17 @@ read_light_curve (char *filename, int *N_t, float **t, float **X)
   double X_mean = 0.;
   double XX_mean = 0.;
 
-  for(int j = 0; j < *N_t; j++) {
+  for(int j = 0; j < N_t; j++) {
     X_mean += Xd[j];
     XX_mean += Xd[j]*Xd[j];
   }
 
-  X_mean /= *N_t;
-  XX_mean /= *N_t;
+  X_mean /= N_t;
+  XX_mean /= N_t;
   
-  float rsqrt_var = 1./sqrt((XX_mean - X_mean*X_mean)*(*N_t)/(*N_t-1));
+  float rsqrt_var = 1./sqrt((XX_mean - X_mean*X_mean)*(N_t)/(N_t-1));
 
-  for(int j = 0; j < *N_t; j++) {
+  for(int j = 0; j < N_t; j++) {
     (*X)[j] = (Xd[j]-X_mean)*rsqrt_var;
   }
 
@@ -195,6 +201,96 @@ set_frequency_params (int N_t, float *t, float F_over, float F_high, int *N_f, f
 }
 
 
+////
+// Initialization
+////
+
+
+
+void
+initialize (int argc, char **argv, Settings *settings)
+{
+
+  // Set up the argtable structs
+
+  
+  struct arg_int *nbootstraps = arg_int0(NULL, "nboots", "<N_bootstraps>", 
+                                            "number of bootstrapped samples to compute");
+  struct arg_int *nfreq = arg_int1(NULL, "nfreq", "<N_frequencies>", 
+                                            "number of frequencies to search");
+
+  struct arg_int *gpumax = arg_int0(NULL, "gpumax", "<use_gpu_to_get_max>", 
+                                            "Use a GPU-reduce kernel to get the max of the LSP");
+  struct arg_dbl *minf = arg_dbl1(NULL, "minf", "<min_frequency>", 
+                                            "minimum freq to search");
+  struct arg_dbl *maxf = arg_dbl1(NULL, "maxf", "<max_frequency>", 
+                                            "maximum freq to search");
+  struct arg_dbl *cutoff = arg_dbl1(NULL, "cutoff", "<cutoff_std>", 
+                                            "minimum SNR for peak of LSP");
+
+  struct arg_file *in = arg_file0(NULL, "in", "<filename_in>", "input file");
+  struct arg_file *inlist = arg_file0(NULL, "list_in", "<list_in>", "list of input files");
+  struct arg_file *out = arg_file1(NULL, "out", "<filename_out>", "output file");
+  struct arg_dbl *over = arg_dbl0(NULL, "over", "<F_over>", "oversample factor");
+  struct arg_dbl *high = arg_dbl0(NULL, "high", "<F_high>", "highest-frequency factor");
+  struct arg_int *dev = arg_int0(NULL, "device", "<device>", "device number");
+
+  struct arg_end *end = arg_end(20);
+  void *argtable[] = {inlist, nbootstraps, nfreq, minf, maxf, cutoff,
+                        in, out, over, high, dev, end};
+
+  // Parse the command line
+
+  int n_error = arg_parse(argc, argv, argtable);
+
+  if (n_error == 0) {
+
+    if (inlist->count == 1){
+      strcpy(settings->filenames[INLIST], inlist->filename[0]);
+      settings->using_list = 1;
+    }
+    else { settings->using_list = 0; }
+
+    if (in->count == 1){
+      strcpy(settings->filenames[IN], in->filename[0]);
+      if (settings->using_list == 1){
+        fprintf(stderr, "both <in> and <inlist> are specified!");
+        exit(EXIT_FAILURE);
+      }
+    }
+
+    strcpy(settings->filenames[OUT], out->filename[0]);
+
+    settings->F_over = over->count == 1 ? (float) over->dval[0] : 1.f;
+    settings->F_high = high->count == 1 ? (float) high->dval[0] : 1.f;
+
+    settings->Nfreq = nfreq->ival[0];
+    settings->Nbootstraps = nbootstraps->count == 1 ? nbootstraps->ival[0] : 0;
+    settings->device = device->ival[0];
+
+    settings->minf = (float) minf->dval[0];
+    settings->maxf = (float) maxf->dval[0];
+
+    settings->df = (settings->maxf - settings->minf)/settings->Nfreq;
+    settings->cutoff = (float) cutoff->dval[0];
+
+    settings->use_gpu_to_get_max = gpumax->count == 1 ? gpumax->ival[0] : 0;
+    settings->verbose = 1; // TODO: add this as commandline argument
+    settings->only_get_max = 1; // TODO: add this as commandline argument
+
+  }
+  else {
+
+    printf("Syntax: %s", argv[0]);
+    arg_print_syntax(stdout, argtable, "\n");
+
+    exit(EXIT_FAILURE);
+
+  }
+
+  // Finish
+
+}
 ////
 // Get elapsed time
 ////

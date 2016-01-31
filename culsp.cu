@@ -19,13 +19,13 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include <argtable2.h>
 
 #include "periodogram.h"
 #include "culsp.h"
 #include "culsp_kernel.cu"
 #include "culsp_kernel_batch.cu"
 #include "minmax.cu"
+
 
 // Wrapper macros
 
@@ -48,10 +48,6 @@
 
 // Forward declarations
 
-//void initialize (int, char **, char **, char **, float *, float *, int *);
-//void initialize_cuda (int, int);
-//void eval_LS_periodogram (int, int, float, float *, float *, float *);
-
 // Main program
 float *get_pinned_float_array(int n){
         float *x;
@@ -65,70 +61,104 @@ void set_pinned_val(float *x, int i, float val){
         x[i] = val;
 }
 
+void read_file_list(char *fname, char ***filenames, int Nlc){
+  FILE *file;
+  *Nlc = get_nlines(fname);
+  int i;
+
+  *lc_filenames = (char **)malloc(*Nlc * sizeof(char *));
+
+  if((file = fopen(filename, "r")) == NULL) {
+    printf("Unable to open file to read\n");
+    exit(1);
+  }
+
+  for(i=0; i<*Nlc; i++){
+    (*lc_filenames)[i] = (char *)malloc(STRLEN * sizeof(char));
+    fscanf(file, "%s ", *lc_filenames + i*STRLEN);
+  }
+
+  fclose(file);
+
+}
+
+
 int
 main( int argc, char** argv) 
 {
 
-  char *filename_in;
-  char *filename_out;
-  float F_over;
-  float F_high;
-  int device;
-
-  int N_t;
-  int N_f;
- 
+  Settings settings;
+  char **lc_filenames;
+  int *N_t;
+  int Nlc, i;
+  
   float *t;
   float *X;
-
-  float df;
   float *P;
-  float minf = 0.0;
+  float freq, p;
 
   // Initialize
+  initialize(argc, argv, &settings);
 
-  initialize(argc, argv, &filename_in, &filename_out, &F_over, &F_high, &device);
+  // Read the list of light curves if there is one...
+  if (settings->using_list){
+    read_file_list(settings->filenames[LIST], &lc_filenames, &Nlc);
+  }
+  // otherwise initialize the variables by hand
+  else{
+    Nlc = 1;
+    lc_filenames = (char **)malloc(Nlc * sizeof(char *));
+    lc_filenames[0] = (char *)malloc(STRLEN * sizeof(char));
+    strcpy(lc_filenames[0], settings->filenames[IN]);
+  }
+  
+  // Count total number of observations
+  N_t = (int *)malloc(Nlc * sizeof(int));
+  int offset = 0, total_size=0;
+  for(i=0; i<Nlc; i++){
+    get_nlines(lc_filenames[i], &N_t[i]);
+    total_size += N_t[i];
+  }
 
-  // Read the light curve
+  float best_matches[2*Nlc];
+  for (i=0; i<2*Nlc; i++ ) best_matches[i] = -1;
 
-  read_light_curve(filename_in, &N_t, &t, &X);
+  CUDA_CALL(cudaMallocHost((void **) &t, total_size * sizeof(float)));
+  CUDA_CALL(cudaMallocHost((void **) &X, total_size * sizeof(float)));
+  CUDA_CALL(cudaMallocHost((void **) &P, Nlc * settings->Nfreq * sizeof(float)));
 
-  // Set up the frequency parameters
-
-  set_frequency_params(N_t, t, F_over, F_high, &N_f, &df);
-
-  // Allocate space for the periodogram
-
-  P = (float *) malloc(N_f*sizeof(float));
+  // now read in the lightcurve data
+  for(i=0; i<Nlc; i++){
+    read_light_curve(lc_filenames[i], N_t[i], &t[offset], &X[offset]);
+    offset += N_t[i];
+  }
 
   // Initialize CUDA
-
   initialize_cuda(device);
-
-  // Start the timer
-
-  double time_a = get_time();
 		 
   // Evaluate the Lomb-Scargle periodogram
-  // set minf to 0 here (simplicity; I'm interacting with this
-  // through python anyway.
-  eval_LS_periodogram(N_t, N_f, df, minf,  t, X, P);
+  compute_LSP_async(N_t, Nlc, settings, t, X, P, best_matches);
 
-  // Stop the timer
-
-  double time_b = get_time();
-  printf( "Processing time: %16.3f (ms)\n", (time_b-time_a)*1000);
-
-  // Write the data to file
-
-  write_periodogram(filename_out, N_f, df, P);
+  //// Write the data to file
+  for(i=0; i<Nlc; i++){
+    if (settings->only_get_max){
+      offset = 2*i;
+      freq = best_matches[offset];
+      p = best_matches[offset+1];
+      if (p > 0){
+        printf("%-50s %-10.3e %-10.3e\n", lc_filenames[i], freq, p);
+      }
+    } /*else {
+      char outname = 
+      write_periodogram(filename_out, N_f, df, P);
+    }*/
+  }
 
   // Free up space
 
-  free(P);
-
-  free(X);
-  free(t);
+  cudaFreeHost(P);
+  cudaFreeHost(X);
+  cudaFreeHost(t);
 
   // Finish
   return 0;
@@ -136,55 +166,6 @@ main( int argc, char** argv)
 }
 
 
-////
-// Initialization
-////
-
-void
-initialize (int argc, char **argv, char **filename_in, char **filename_out, 
-	    float *F_over, float *F_high, int *device)
-{
-
-  // Set up the argtable structs
-
-  struct arg_file *in = arg_file1(NULL, "in", "<filename_in>", "input file");
-  struct arg_file *out = arg_file1(NULL, "out", "<filename_out>", "output file");
-  struct arg_dbl *over = arg_dbl0(NULL, "over", "<F_over>", "oversample factor");
-  struct arg_dbl *high = arg_dbl0(NULL, "high", "<F_high>", "highest-frequency factor");
-  struct arg_int *dev = arg_int0(NULL, "device", "<device>", "device number");
-  struct arg_end *end = arg_end(20);
-  void *argtable[] = {in,out,over,high,dev,end};
-
-  // Parse the command line
-
-  int n_error = arg_parse(argc, argv, argtable);
-
-  if (n_error == 0) {
-
-    *filename_in = (char *) malloc(strlen(in->filename[0])+1);
-    strcpy(*filename_in, in->filename[0]);
-
-    *filename_out = (char *) malloc(strlen(out->filename[0])+1);
-    strcpy(*filename_out, out->filename[0]);
-
-    *F_over = over->count == 1 ? (float) over->dval[0] : 1.f;
-    *F_high = high->count == 1 ? (float) high->dval[0] : 1.f;
-
-    *device = dev->count == 1 ? dev->ival[0] : 0;
-
-  }
-  else {
-
-    printf("Syntax: %s", argv[0]);
-    arg_print_syntax(stdout, argtable, "\n");
-
-    exit(EXIT_FAILURE);
-
-  }
-
-  // Finish
-
-}
 
 
 ////
@@ -207,138 +188,22 @@ initialize_cuda (int device)
 
 }
 
-
-void 
-dummy(int *N_t, int Nlc, int N_f, float df, float minf, 
-         float *t, float *X, float *P)
-{
-  // DOES NOTHING -- to time i/o stuff. 
-
-  float *d_t;
-  float *d_X;
-  float *d_P;
-
-  cudaStream_t streams[Nlc];
-  int total_size=0;
-  int i, offset, gd;
-  for (i=0; i<Nlc; i++) total_size += N_t[i];
-
-  CUDA_CALL(cudaMalloc((void**) &d_t, total_size*sizeof(float)));
-  CUDA_CALL(cudaMalloc((void**) &d_X, total_size*sizeof(float)));
-  CUDA_CALL(cudaMalloc((void**) &d_P, N_f*Nlc*sizeof(float)));
-
-  gd = N_f/BLOCK_SIZE;
-  while (gd * BLOCK_SIZE < N_f) gd += 1;
-  dim3 grid_dim(gd, 1, 1);
-  dim3 block_dim(BLOCK_SIZE, 1, 1);
-
-  offset = 0;
-  for(i=0; i < Nlc; i++){
-    cudaStreamCreate(&streams[i]);
-
-    CUDA_CALL(cudaMemcpyAsync(&d_t[offset], &t[offset], N_t[i] * sizeof(float), 
-              cudaMemcpyHostToDevice, streams[i]));
-    CUDA_CALL(cudaMemcpyAsync(&d_X[offset], &X[offset], N_t[i] * sizeof(float), 
-              cudaMemcpyHostToDevice, streams[i]));
-    
-    dummy_kernel<<<grid_dim, block_dim, 0, streams[i]>>>(d_t, d_X, d_P, df, offset, 
-                                                                            N_t[i], N_f, minf);
-
-    CUDA_CALL(cudaMemcpyAsync(&P[i*N_f], &d_P[i*N_f], N_f * sizeof(float), 
-              cudaMemcpyDeviceToHost, streams[i]));
-    offset += N_t[i];
-  }
-
-  CUDA_CALL( cudaDeviceSynchronize() );
-
-  cudaError_t err = cudaGetLastError();
-  if(err != cudaSuccess) {
-    fprintf(stderr, "Cuda error: kernel launch failed in file '%s' in line %i : %s.\n",
-      __FILE__, __LINE__, cudaGetErrorString(err));
-        exit(EXIT_FAILURE);
-  }
-
-  CUDA_CALL(cudaFree(d_P));
-  CUDA_CALL(cudaFree(d_X));
-  CUDA_CALL(cudaFree(d_t));
-
-  for (int i = 0; i < Nlc; ++i)
-    CUDA_CALL( cudaStreamDestroy(streams[i]) );
-  // Finish
-
-}
-
 ////
 // Periodogram evaluation
 ////
+/*
 
 void
-eval_LS_periodogram (int N_t, int N_f, float df, float minf, 
-		     float *t, float *X, float *P)
-{
-
-
-  // Allocate device memory and copy data over
-
-  float *d_t;
-  float *d_X;
-  float *d_P;
-
-  int gd;
-
-  CUDA_CALL(cudaMalloc((void**) &d_t, N_t*sizeof(float)));
-  CUDA_CALL(cudaMalloc((void**) &d_X, N_t*sizeof(float)));
-  CUDA_CALL(cudaMalloc((void**) &d_P, N_f*sizeof(float)));
-
-  CUDA_CALL(cudaMemcpy(d_t, t, N_t*sizeof(float), cudaMemcpyHostToDevice));
-  CUDA_CALL(cudaMemcpy(d_X, X, N_t*sizeof(float), cudaMemcpyHostToDevice));
-
-  // Set up run parameters
-
-  gd = N_f/BLOCK_SIZE;
-  while (gd * BLOCK_SIZE < N_f) gd += 1;
-
-  dim3 grid_dim(gd, 1, 1);
-  dim3 block_dim(BLOCK_SIZE, 1, 1);
-
-  //printf("Grid of %d frequency blocks of size %d threads\n", N_f/BLOCK_SIZE, BLOCK_SIZE);
-
-  // Launch the kernel
-
-  //printf("Launching kernel...\n");
-
-  culsp_kernel<<<grid_dim, block_dim>>>(d_t, d_X, d_P, df, N_t, N_f, minf);
-
-  cudaError_t err = cudaGetLastError();
-  if(err != cudaSuccess) {
-    fprintf(stderr, "Cuda error: kernel launch failed in file '%s' in line %i : %s.\n",
-	    __FILE__, __LINE__, cudaGetErrorString(err));
-        exit(EXIT_FAILURE);
-  }
-
-  CUDA_CALL(cudaThreadSynchronize());
-
-  //printf("Completed!\n");
-
-  // Copy data from the device
-
-  CUDA_CALL(cudaMemcpy(P, d_P, N_f*sizeof(float), cudaMemcpyDeviceToHost));
-
-  CUDA_CALL(cudaFree(d_P));
-  CUDA_CALL(cudaFree(d_X));
-  CUDA_CALL(cudaFree(d_t));
-
-  // Finish
-
-}
-
-void
-batch_eval_LS_periodogram (int *N_t, int Nlc, int N_f, float df, float minf, 
+compute_LSP_batch (int *N_t, int Nlc, Settings settings,
          float *t, float *X, float *P)
 {
 
 
   // Allocate device memory and copy data over
+  int N_f = settings->Nfreq;
+  float minf =settings->minf;
+  float maxf = settings->maxf;
+  float df = settings->df;
 
   float *d_t;
   float *d_X;
@@ -393,33 +258,51 @@ batch_eval_LS_periodogram (int *N_t, int Nlc, int N_f, float df, float minf,
   // Finish
 
 }
+*/
 
 
-void
-stream_eval_LS_periodogram (int *N_t, int Nlc, int N_f, float df, float minf, 
-         float *t, float *X, float *P)
+void 
+compute_LSP_async (int *N_t, int Nlc, Settings settings,
+         float *t, float *X, float *P, float *matches)
 {
 
-  // Allocate device memory and copy data over
+  
+  int N_f = settings->Nfreq;
+  float minf =settings->minf;
+  float maxf = settings->maxf;
+  float df = settings->df;
+  int Nbootstraps = settings->Nbootstraps
+  int only_get_max = settings->only_get_max;
 
   float *d_t;
   float *d_X;
-  float *d_P;
+  float *d_P, *dp;
 
   cudaStream_t streams[Nlc];
   int total_size=0;
-  int i, offset, gd;
+  int i, offset, gd, imax;
+  float cmax;
   for (i=0; i<Nlc; i++) total_size += N_t[i];
 
+
+  
+  // Allocate device memory
   CUDA_CALL(cudaMalloc((void**) &d_t, total_size*sizeof(float)));
   CUDA_CALL(cudaMalloc((void**) &d_X, total_size*sizeof(float)));
-  CUDA_CALL(cudaMalloc((void**) &d_P, N_f*Nlc*sizeof(float)));
+  if (only_get_max){
+    CUDA_CALL(cudaMalloc((void**) &d_P, N_f*sizeof(float)));
+  }
+  else{
+    CUDA_CALL(cudaMalloc((void**) &d_P, N_f*Nlc*sizeof(float)));
+  }
 
+  // setup block/grid dimensions
   gd = N_f/BLOCK_SIZE;
   while (gd * BLOCK_SIZE < N_f) gd += 1;
   dim3 grid_dim(gd, 1, 1);
   dim3 block_dim(BLOCK_SIZE, 1, 1);
 
+  // asynchronously transfer data and perform LSP on all lightcurves
   offset = 0;
   for(i=0; i < Nlc; i++){
     cudaStreamCreate(&streams[i]);
@@ -429,22 +312,78 @@ stream_eval_LS_periodogram (int *N_t, int Nlc, int N_f, float df, float minf,
     CUDA_CALL(cudaMemcpyAsync(&d_X[offset], &X[offset], N_t[i] * sizeof(float), 
               cudaMemcpyHostToDevice, streams[i]));
     
-    culsp_kernel_stream<<<grid_dim, block_dim, 0, streams[i]>>>(d_t, d_X, d_P, df, offset, 
-                                                                            N_t[i], N_f, minf);
+    if (only_get_max){
+      dp = d_P;
+    }
+    else{
+      dp = &d_P[i*N_f];
+    }
+    
+    culsp_kernel_stream<<<grid_dim, block_dim, 
+                                0, streams[i]>>>( &d_t[offset], 
+                                                  &d_X[offset]
+                                                  dp, df, N_t[i], N_f, minf);
 
-    CUDA_CALL(cudaMemcpyAsync(&P[i*N_f], &d_P[i*N_f], N_f * sizeof(float), 
-              cudaMemcpyDeviceToHost, streams[i]));
+    if (only_get_max){
+      gpu_maxf_ind(dp, N_f, &cmax, &imax)
+    }
+    else{
+      CUDA_CALL(cudaMemcpyAsync(&P[i*N_f], dp, N_f * sizeof(float), 
+              cudaMemcpyDeviceToHost, streams[i]));   
+    }
+   
     offset += N_t[i];
   }
 
+  // wait for everyone
   CUDA_CALL( cudaDeviceSynchronize() );
 
+  // check for problems
   cudaError_t err = cudaGetLastError();
   if(err != cudaSuccess) {
     fprintf(stderr, "Cuda error: kernel launch failed in file '%s' in line %i : %s.\n",
       __FILE__, __LINE__, cudaGetErrorString(err));
         exit(EXIT_FAILURE);
   }
+
+
+  // handle bootstrapping 
+  if (Nbootstraps > 0){
+    float max_heights[N_f], mu, std, maxp;
+    int besti;
+
+    offset = 0;
+    for(i=0; i<Nlc; i++){
+      // get a bootstrapped distribution of max(LSP) heights
+      bootstrap_LSP(N_t[i], settings, &d_t[offset], &d_X[offset], max_heights);
+
+      // now calculate the mean + std of that distro.
+      cpu_stats(max_heights, N_f, &mu, &std);
+
+      // find the highest peak of the LSP
+      if (only_get_max){
+        maxp = cmax;
+        besti = imax;
+      } else {
+        cpu_maxf_ind(&P[i*N_f], N_f, &maxp, &besti);
+      }
+
+      // -> SNR of that peak
+      maxp = ((maxp - mu)/std);
+
+      // if significant, record it
+      if ( maxp > settings->cutoff){
+        matches[2*i] = minf + df * besti // freq
+        matches[2*i + 1] = maxp
+        if (settings->verbose)
+          printf("  PEAK FOUND! (%d) freq = %.4e ; snr = %.4e\n", 
+                                    i, matches[2*i], matches[2*i+1]);
+        
+      }
+      offset += N_t[i]
+    }
+  }
+
 
   CUDA_CALL(cudaFree(d_P));
   CUDA_CALL(cudaFree(d_X));
@@ -457,26 +396,21 @@ stream_eval_LS_periodogram (int *N_t, int Nlc, int N_f, float df, float minf,
 }
 
 void
-bootstrap_LS_periodogram(int N_t, int N_f, float df, float minf, 
-         float *t, float *X, float *max_heights, int N_bootstrap, int use_gpu_to_get_max){
+bootstrap_LSP(int N_t, Settings settings,
+         float *d_t, float *d_X, float *max_heights){
 
 
   // Allocate device memory and copy data over
 
-  float *d_t, *d_X, *d_P;
-  float *P, *gmax;
-  int i, gd, gdm, gdm0;
+  float *d_P;
+  float *P;
+  int i, gd, imax;
   float val;
 
   curandState *state;
   cudaError_t err; 
 
-  CUDA_CALL(cudaMalloc((void**) &d_t, N_t*sizeof(float)));
-  CUDA_CALL(cudaMalloc((void**) &d_X, N_t*sizeof(float)));
   CUDA_CALL(cudaMalloc((void**) &d_P, N_f*sizeof(float)));
-
-  CUDA_CALL(cudaMemcpy(d_t, t, N_t*sizeof(float), cudaMemcpyHostToDevice));
-  CUDA_CALL(cudaMemcpy(d_X, X, N_t*sizeof(float), cudaMemcpyHostToDevice));
 
   // Get N_bootstraps LSP; then get max_height of each of these.
   // This can be made faster by altering the bootstrap code to get
@@ -484,7 +418,7 @@ bootstrap_LS_periodogram(int N_t, int N_f, float df, float minf,
   // should be small speed increase: 
   //    <LC> ~ 0.4 MB; transfer time wasted = 2 * (0.4/1000 GB) / (~15 GB/s PCIe3x16) 
   //                 ~ 8E-4 seconds...maaaaaybe significant...
-  // timing the results on 
+  //          So I tried this and tested it -- cpu max is actually faster...
 
   
   gd = N_f/BLOCK_SIZE;
@@ -497,13 +431,7 @@ bootstrap_LS_periodogram(int N_t, int N_f, float df, float minf,
   CUDA_CALL(cudaMalloc((void **) &state, gd*BLOCK_SIZE * sizeof(curandState)));
   setup_curand_kernel<<<grid_dim, block_dim>>>(state, time(NULL));
   
-  if (use_gpu_to_get_max){
-    // allocate memory for the maximums array
-    CUDA_CALL(cudaMalloc((void **) &gmax, gd * sizeof(float)));  
-
-  } else {
-
-    //printf("USING CPU TO FIND MAX(P_LS)\n");
+  if (!use_gpu_to_get_max){
     P = (float *) malloc(N_f * sizeof(float));
   }
 
@@ -512,48 +440,23 @@ bootstrap_LS_periodogram(int N_t, int N_f, float df, float minf,
     bootstrap_kernel<<<grid_dim, block_dim>>>(d_t, d_X, d_P, df, N_t, N_f, minf, state);
     //CUDA_ERR_CHECK();
 
+
     if (use_gpu_to_get_max){
-      // calculate the maximum.
-      max_reduce<<<grid_dim, block_dim, BLOCK_SIZE * sizeof(float)>>>(d_P, gmax, N_f);
-      
-      // Now reduce until only one block is needed.
-      gdm = gd;
-      while (gdm > 1){
+      gpu_maxf_ind(d_P, N_f, &val, &imax);
 
-        gdm0 = gdm;
-        gdm /= BLOCK_SIZE;
-        if( gdm * BLOCK_SIZE < gdm0 ) gdm += 1;
-        
-        dim3 grid_dim_max(gdm, 1, 1);
-
-        max_reduce<<<grid_dim_max, block_dim, BLOCK_SIZE*sizeof(float)>>>(gmax, gmax, gdm0);
-
-      }
-
-      //copy max(P) to the host
-      CUDA_CALL(cudaMemcpy(&val, gmax, sizeof(float), cudaMemcpyDeviceToHost));
-    
     } else {
-    
+
       CUDA_CALL(cudaMemcpy(P, d_P, N_f*sizeof(float), cudaMemcpyDeviceToHost));
-      //printf("CPUMAX");
       val = cpu_maxf(P, N_f); 
     }
 
     max_heights[i] = val;
   }
 
-  //CUDA_ERR_CHECK();
-
   CUDA_CALL(cudaThreadSynchronize());
 
   CUDA_CALL(cudaFree(d_P));
-  CUDA_CALL(cudaFree(d_X));
-  CUDA_CALL(cudaFree(d_t));
-  if (use_gpu_to_get_max) {
-    CUDA_CALL(cudaFree(state));
-    CUDA_CALL(cudaFree(gmax));
-  }
+  CUDA_CALL(cudaFree(state));
 
   // Finish
 
