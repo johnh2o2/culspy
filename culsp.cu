@@ -128,6 +128,7 @@ main( int argc, char** argv)
   // Count total number of observations
   clock_t start = clock(), diff, start2, diff2;
   float dt, io, dt2, io2;
+  /*
   N_t = (int *)malloc(Nlc * sizeof(int));
   int offset = 0, total_size=0;
   for(i=0; i<Nlc; i++){
@@ -141,14 +142,15 @@ main( int argc, char** argv)
   
   
   if (settings.verbose) printf("done. %d datapoints\n", total_size);
-
+  */
   float best_matches[2*Nlc];
   for (i=0; i<2*Nlc; i++ ) best_matches[i] = -1;
-
+  /*
   CUDA_CALL(cudaMallocHost((void **) &t, total_size * sizeof(float)));
   CUDA_CALL(cudaMallocHost((void **) &X, total_size * sizeof(float)));
+  */
   CUDA_CALL(cudaMallocHost((void **) &P, Nlc * settings.Nfreq * sizeof(float)));
-
+  /*
   start2 = clock();
   // now read in the lightcurve data
   for(i=0; i<Nlc; i++){
@@ -161,11 +163,12 @@ main( int argc, char** argv)
   io2 = ((float)diff2)/CLOCKS_PER_SEC;
   printf(" read in data from each lightcurve\n\
    %.3e s / lightcurve\n", io2/Nlc);
-
+  */
   if (settings.verbose) printf("now computing LSP ..\n");
   // Evaluate the Lomb-Scargle periodogram
   start2 = clock();
-  compute_LSP_async(N_t, Nlc, &settings, t, X, P, best_matches);
+  //compute_LSP_async(N_t, Nlc, &settings, t, X, P, best_matches);
+  compute_LSP_async_from_files( &settings, filenames, Nlc, P, best_matches);
   diff = clock() - start;
   diff2 = diff + start - start2;
 
@@ -424,7 +427,7 @@ compute_LSP_async (int *N_t, int Nlc, Settings *settings,
   // Finish
 
 }
-/*
+
 void 
 compute_LSP_async_from_files (Settings *settings, char **filenames, int Nlc, float *P, float *matches)
 {
@@ -440,7 +443,7 @@ compute_LSP_async_from_files (Settings *settings, char **filenames, int Nlc, flo
   float *d_X;
   float *d_P;
 
-  int N_t;
+  int *N_t = (int *) malloc(Nlc *sizeof(int));
   float *tbuffer, *Xbuffer;
 
   cudaStream_t streams[Nlc];
@@ -464,22 +467,26 @@ compute_LSP_async_from_files (Settings *settings, char **filenames, int Nlc, flo
   if (v) printf(" compute_LSP_async > done.\n");
   // asynchronously transfer data and perform LSP on all lightcurves
   offset = 0;
+  FILE *f;
   for(i=0; i < Nlc; i++){
     cudaStreamCreate(&streams[i]);
 
     // now read in lightcurve from disk
-    N_t = get_nlines_raw(filenames[i]);
+    // N_t = get_nlines(filenames[i]);
+    f = fopen(filenames[i], "r");
+    fscanf(f, "%d ", &N_t[i]);
+    fclose(f);
 
-    tbuffer = (float *)malloc(N_t * sizeof(float));
-    Xbuffer = (float *)malloc(N_t * sizeof(float));
-
-    read_light_curve(filenames[i], N_t, tbuffer, Xbuffer);
+    cudaMallocHost((void **) &tbuffer, N_t * sizeof(float));
+    cudaMallocHost((void **) &Xbuffer, N_t * sizeof(float));
+    
+    read_light_curve(filenames[i], N_t[i], tbuffer, Xbuffer);
 
     //pass it to the GPU
 
-    CUDA_CALL(cudaMemcpyAsync(&d_t[offset], tbuffer, N_t * sizeof(float), 
+    CUDA_CALL(cudaMemcpyAsync(&d_t[offset], tbuffer, N_t[i] * sizeof(float), 
               cudaMemcpyHostToDevice, streams[i]));
-    CUDA_CALL(cudaMemcpyAsync(&d_X, Xbuffer, N_t * sizeof(float), 
+    CUDA_CALL(cudaMemcpyAsync(&d_X[offset], Xbuffer, N_t[i] * sizeof(float), 
               cudaMemcpyHostToDevice, streams[i]));
     
     
@@ -494,6 +501,8 @@ compute_LSP_async_from_files (Settings *settings, char **filenames, int Nlc, flo
     }
    
     offset += N_t[i];
+
+    cudaFreeHost(tbuffer); cudaFreeHost(Xbuffer);
   }
   if (v) printf(" compute_LSP_async > all commands issued. now we wait..\n");
   // wait for everyone
@@ -555,7 +564,6 @@ compute_LSP_async_from_files (Settings *settings, char **filenames, int Nlc, flo
   // Finish
 
 }
-*/
 
 void
 bootstrap_LSP(int N_t, Settings *settings,
