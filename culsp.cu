@@ -364,14 +364,16 @@ compute_LSP_async (int *N_t, int Nlc, Settings *settings,
       // get a bootstrapped distribution of max(LSP) heights
       bootstrap_LSP(N_t[i], settings, &d_t[offset], &d_X[offset], max_heights);
 
+      for (j= 0; j < Nbootstraps; j++) printf("max_heights[%-4d] = %.4f; ", j, max_heights[j]); 
+      exit(EXIT_FAILURE);
+    
       // now calculate the mean + std of that distro.
       cpu_stats(max_heights, N_f, &mu, &std);
 
       //printf("    mu = %.3e  std = %.3e  max_heights[0] = %.3e\n",
       //         mu, std, max_heights[0]);
-      for (j= 0; j < Nbootstraps; j++) printf("max_heights[%-4d] = %.4f; ", j, max_heights[j]); 
-      exit(EXIT_FAILURE);
-    
+      
+
       // find the highest peak of the LSP
       if (use_gpu_to_get_max || only_get_max){
         gpu_maxf_ind(&d_P[i*N_f], N_f, &maxp, &besti);
