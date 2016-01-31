@@ -65,6 +65,7 @@ void set_pinned_val(float *x, int i, float val){
 void read_file_list(char *fname, char ***filenames, int *Nlc){
   FILE *file;
   *Nlc = get_nlines(fname);
+  printf("   read_file_list > Nlc = %d\n", *Nlc);
   int i;
 
   *filenames = (char **)malloc(*Nlc * sizeof(char *));
