@@ -292,12 +292,12 @@ compute_LSP_async (int *N_t, int Nlc, Settings *settings,
 
   float *d_t;
   float *d_X;
-  float *d_P, *dp;
+  float *d_P;
 
   cudaStream_t streams[Nlc];
   int total_size=0;
-  int i, offset, gd, imax;
-  float cmax;
+  int i, offset, gd;
+
   for (i=0; i<Nlc; i++) total_size += N_t[i];
 
   printf(" compute_LSP_async > here. setting up.\n");
@@ -367,6 +367,9 @@ compute_LSP_async (int *N_t, int Nlc, Settings *settings,
       // now calculate the mean + std of that distro.
       cpu_stats(max_heights, N_f, &mu, &std);
 
+      printf("    mu = %.3e  std = %.3e  max_heights[0] = %.3e\n",
+               mu, std, max_heights[0])
+
       // find the highest peak of the LSP
       if (use_gpu_to_get_max || only_get_max){
         gpu_maxf_ind(&d_P[i*N_f], N_f, &maxp, &besti);
@@ -382,8 +385,6 @@ compute_LSP_async (int *N_t, int Nlc, Settings *settings,
 
       // if significant, record it
       if ( maxp > settings->cutoff){
-        matches[2*i] = minf + df * besti; // freq
-        matches[2*i + 1] = maxp;
         if (settings->verbose)
           printf("  PEAK FOUND! (%d) freq = %.4e ; snr = %.4e\n", 
                                     i, matches[2*i], matches[2*i+1]);
