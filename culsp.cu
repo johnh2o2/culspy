@@ -76,7 +76,7 @@ void read_file_list(char *fname, char ***filenames, int *Nlc){
 
   for(i=0; i<*Nlc; i++){
     (*filenames)[i] = (char *)malloc(STRLEN * sizeof(char));
-    fscanf(file, "%s ", *filenames + i*STRLEN);
+    fscanf(file, "%s ", (*filenames)[i]));
   }
 
   fclose(file);
@@ -103,7 +103,7 @@ main( int argc, char** argv)
   initialize(argc, argv, &settings);
 
   printf("reading list..\n");
-  
+
   // Read the list of light curves if there is one...
   if (settings.using_list){
     read_file_list(settings.filenames[INLIST], &lc_filenames, &Nlc);
