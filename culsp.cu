@@ -375,7 +375,7 @@ compute_LSP_async (int *N_t, int Nlc, Settings *settings,
       }
 
       // -> SNR of that peak
-      maxp = ((maxp - mu)/std);
+      //maxp = ((maxp - mu)/std);
 
       matches[2*i] = minf + df * besti; // freq
       matches[2*i + 1] = maxp;
