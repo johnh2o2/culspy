@@ -266,7 +266,7 @@ initialize (int argc, char **argv, Settings *settings)
 
     settings->Nfreq = nfreq->ival[0];
     settings->Nbootstraps = nbootstraps->count == 1 ? nbootstraps->ival[0] : 0;
-    settings->device = device->ival[0];
+    settings->device = dev->ival[0];
 
     settings->minf = (float) minf->dval[0];
     settings->maxf = (float) maxf->dval[0];
