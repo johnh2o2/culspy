@@ -406,7 +406,7 @@ compute_LSP_async (int *N_t, int Nlc, Settings *settings,
       matches[2*i + 1] = maxp;
 
       // if significant, record it
-      if ( maxp > settings->cutoff) &&  settings->verbose){
+      if ( maxp > settings->cutoff  &&  settings->verbose){
           printf("  PEAK FOUND! (%d) freq = %.4e ; snr = %.4e\n", 
                                     i, matches[2*i], matches[2*i+1]);  
       }
