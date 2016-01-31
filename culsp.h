@@ -17,5 +17,6 @@ void initialize_cuda(int);
 void eval_LS_periodogram(int, int, float, float, float *, float *, float *);
 //void batch_eval_LS_periodogram(int*, int, int, float, float, float *, float *, float *);
 void compute_LSP_async(int*, int, Settings *, float*, float*, float *, float *);
+void compute_LSP_async_from_files (Settings *, char **, int , float *, float *);
 void bootstrap_LSP(int, Settings *, float *, float *, float *);
 #endif
