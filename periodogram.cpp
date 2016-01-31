@@ -50,7 +50,7 @@ int get_nlines(char *filename){
 }
 
 void
-read_light_curve (char *filename, int N_t, float **t, float **X)
+read_light_curve (char *filename, int N_t, float *t, float *X)
 {
 
   // Open the file 
@@ -89,7 +89,7 @@ read_light_curve (char *filename, int N_t, float **t, float **X)
   t_mean /= N_t;
 
   for(int j = 0; j < N_t; j++) {
-    (*t)[j] = td[j] - t_mean;
+    t[j] = td[j] - t_mean;
   }
 
   // Shift the data to have zero mean, and scale it to have unit
@@ -109,7 +109,7 @@ read_light_curve (char *filename, int N_t, float **t, float **X)
   float rsqrt_var = 1./sqrt((XX_mean - X_mean*X_mean)*(N_t)/(N_t-1));
 
   for(int j = 0; j < N_t; j++) {
-    (*X)[j] = (Xd[j]-X_mean)*rsqrt_var;
+    X[j] = (Xd[j]-X_mean)*rsqrt_var;
   }
 
   // Finish

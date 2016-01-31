@@ -16,6 +16,6 @@ typedef struct {
 void initialize_cuda(int);
 void eval_LS_periodogram(int, int, float, float, float *, float *, float *);
 //void batch_eval_LS_periodogram(int*, int, int, float, float, float *, float *, float *);
-void compute_LSP_async(int*, int, int, float, float, float *, float *, float *);
-void bootstrap_LSP(int, int, float, float, float *, float *, float *, int, int);
+void compute_LSP_async(int*, int, Settings *, float*, float*, float *, float *);
+void bootstrap_LSP(int, Settings *, float *, float *, float *);
 #endif

@@ -134,10 +134,10 @@ main( int argc, char** argv)
   }
 
   // Initialize CUDA
-  initialize_cuda(device);
+  initialize_cuda(settings.device);
 		 
   // Evaluate the Lomb-Scargle periodogram
-  compute_LSP_async(N_t, Nlc, settings, t, X, P, best_matches);
+  compute_LSP_async(N_t, Nlc, &settings, t, X, P, best_matches);
 
   //// Write the data to file
   for(i=0; i<Nlc; i++){
@@ -271,7 +271,7 @@ compute_LSP_async (int *N_t, int Nlc, Settings *settings,
   float minf =settings->minf;
   float maxf = settings->maxf;
   float df = settings->df;
-  int Nbootstraps = settings->Nbootstraps
+  int Nbootstraps = settings->Nbootstraps;
   int only_get_max = settings->only_get_max;
 
   float *d_t;
@@ -321,11 +321,11 @@ compute_LSP_async (int *N_t, int Nlc, Settings *settings,
     
     culsp_kernel_stream<<<grid_dim, block_dim, 
                                 0, streams[i]>>>( &d_t[offset], 
-                                                  &d_X[offset]
+                                                  &d_X[offset],
                                                   dp, df, N_t[i], N_f, minf);
 
     if (only_get_max){
-      gpu_maxf_ind(dp, N_f, &cmax, &imax)
+      gpu_maxf_ind(dp, N_f, &cmax, &imax);
     }
     else{
       CUDA_CALL(cudaMemcpyAsync(&P[i*N_f], dp, N_f * sizeof(float), 
@@ -373,14 +373,14 @@ compute_LSP_async (int *N_t, int Nlc, Settings *settings,
 
       // if significant, record it
       if ( maxp > settings->cutoff){
-        matches[2*i] = minf + df * besti // freq
-        matches[2*i + 1] = maxp
+        matches[2*i] = minf + df * besti; // freq
+        matches[2*i + 1] = maxp;
         if (settings->verbose)
           printf("  PEAK FOUND! (%d) freq = %.4e ; snr = %.4e\n", 
                                     i, matches[2*i], matches[2*i+1]);
         
       }
-      offset += N_t[i]
+      offset += N_t[i];
     }
   }
 
@@ -396,7 +396,7 @@ compute_LSP_async (int *N_t, int Nlc, Settings *settings,
 }
 
 void
-bootstrap_LSP(int N_t, Settings settings,
+bootstrap_LSP(int N_t, Settings *settings,
          float *d_t, float *d_X, float *max_heights){
 
 
